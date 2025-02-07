@@ -1,0 +1,113 @@
+spring:
+  application:
+    name: knowledge-base
+  data:
+    redis:
+      database: 1
+      timeout: 10s
+      repositories:
+        enabled: false
+      lettuce:
+        pool:
+          max-active: 200
+          max-wait: -1ms
+          max-idle: 10
+          min-idle: 0
+      host: redis
+  datasource:
+    url: jdbc:mysql://mysql:3306/knowledge_base
+    username: root
+    password: nft_2868
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  neo4j:
+    authentication:
+      username: neo4j
+      password: 12345678
+    uri: bolt://neo4j:7687
+  ai:
+    # 阿里灵积
+    dash-scope:
+      api-key: sk-956c69dfd7f3489bbd7eeec37db4f4d7
+      chat:
+        options:
+          model: qwen-max
+          # 多模态图片理解需要开启
+      #          multi-model: true
+      embedding:
+        options:
+          model: text-embedding-v2
+      image:
+        options:
+          model: wanx-v1
+    # 百度千帆 需要在pom.xml中放开qianfan starter的注释
+    qian-fan:
+      api-key: xxx
+      secret-key: xxx
+    # openai 需要在pom.xml中放开openai starter的注释
+    openai:
+      api-key: xxx
+    # 智谱清言 同样
+    zhipuai:
+      api-key: a9cb7058aabd4edbba1e7c4944431a44.QlxsNYiPvjFR13Cq
+    # kimi 同样
+    moonshot:
+      api-key: xxx
+    ollama:
+      # 填写模型所在的地址
+      base-url: http://localhost:11434
+      chat:
+        model: xxx
+    vectorstore:
+      redis:
+        initialize-schema: true
+
+code-assistant:
+  project:
+    project-path: F:\workspace\code\opensource\dive-into-spring-ai
+  arthas:
+    url: http://localhost:8563/api
+    password: arthas
+    username: arthas
+server:
+  port: 9902
+sa-token:
+  # token名称 (同时也是cookie名称)
+  token-name: token
+  # token有效期，单位s 默认30天, -1代表永不过期
+  timeout: 2592000
+  # token临时有效期 (指定时间内无操作就视为token过期) 单位: 秒
+  active-timeout: -1
+  # 是否允许同一账号并发登录 (为true时允许一起登录, 为false时新登录挤掉旧登录)
+  is-concurrent: true
+  # 在多人登录同一账号时，是否共用一个token (为true时所有登录共用一个token, 为false时每次登录新建一个token)
+  is-share: true
+  # token风格
+  token-style: uuid
+  # 是否输出操作日志
+  is-log: true
+  # 自动续签
+  auto-renew: true
+oss:
+  provider: ali_yun
+  # 阿里云oss配置
+  ali-yun:
+    access-key-id: xxx
+    access-key-secret: xxx
+    endpoint: xxx
+    bucket-name: xxx
+  # 腾讯云oss配置
+  tencent:
+    bucket: xx
+    region: xx
+    secret-id: xx
+    secret-key: xx
+jimmer:
+  dialect: org.babyfish.jimmer.sql.dialect.MySqlDialect
+  show-sql: true
+  pretty-sql: true
+  client:
+    ts:
+      path: /ts.zip
+    openapi:
+      path: /openapi
+      ui-path: /openapi-ui

@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
+    "async-validator": "^4.2.5",
     "axios": "^1.6.4",
     "dayjs": "^1.11.10",
     "element-plus": "^2.4.2",
@@ -22,6 +23,7 @@
     "md-editor-v3": "^4.13.2",
     "pinia": "^2.1.7",
     "sse.js": "^2.4.1",
+    "uni-ai-admin": "file:",
     "vue": "^3.4.21",
     "vue-router": "^4.2.5"
   },
