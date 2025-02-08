@@ -82,21 +82,43 @@
     <!--            <groupId>org.springframework.ai</groupId>-->
     <!--            <artifactId>spring-ai-zhipuai-spring-boot-starter</artifactId>-->
     <!--        </dependency>-->
-    <!--        <dependency>-->
-    <!--            <groupId>org.springframework.ai</groupId>-->
-    <!--            <artifactId>spring-ai-openai-spring-boot-starter</artifactId>-->
-    <!--        </dependency>-->
-    <!--        <dependency>-->
-    <!--            <groupId>org.springframework.ai</groupId>-->
-    <!--            <artifactId>spring-ai-ollama-spring-boot-starter</artifactId>-->
-    <!--        </dependency>-->
+<!--            <dependency>-->
+<!--                <groupId>org.springframework.ai</groupId>-->
+<!--                <artifactId>spring-ai-openai-spring-boot-starter</artifactId>-->
+<!--            </dependency>-->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-ollama-spring-boot-starter</artifactId>
+            </dependency>
+
+
+<!--    <dependency>-->
+<!--      <groupId>com.alibaba.cloud.ai</groupId>-->
+<!--      <artifactId>spring-ai-alibaba-starter</artifactId>-->
+<!--      <version>${spring-ai-alibaba.version}</version>-->
+<!--    </dependency>-->
+
+
+<!--    <dependency>-->
+<!--      <groupId>org.springframework.ai</groupId>-->
+<!--      <artifactId>spring-ai-ollama-spring-boot-starter</artifactId>-->
+<!--    </dependency>-->
+
+
+    <!-- https://mvnrepository.com/artifact/org.springframework.ai/spring-ai-spring-boot-autoconfigure -->
+    <dependency>
+      <groupId>org.springframework.ai</groupId>
+      <artifactId>spring-ai-spring-boot-autoconfigure</artifactId>
+      <version>1.0.0-M3</version>
+    </dependency>
 
 
     <dependency>
-      <groupId>com.alibaba.cloud.ai</groupId>
-      <artifactId>spring-ai-alibaba-starter</artifactId>
-      <version>${spring-ai-alibaba.version}</version>
+      <groupId>org.springframework.ai</groupId>
+      <artifactId>spring-ai-core</artifactId>
+      <version>1.0.0-M3</version> <!-- 具体版本根据需要替换 -->
     </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
@@ -115,7 +137,7 @@
       <groupId>com.mysql</groupId>
     </dependency>
     <dependency>
-      <artifactId>hutool-core</artifactId>
+      <artifactId>hutool-all</artifactId>
       <groupId>cn.hutool</groupId>
       <version>${hutool.version}</version>
     </dependency>

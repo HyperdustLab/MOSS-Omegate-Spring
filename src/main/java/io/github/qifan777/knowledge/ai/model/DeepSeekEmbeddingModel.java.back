@@ -1,0 +1,101 @@
+package io.github.qifan777.knowledge.ai.model;
+
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.embedding.EmbeddingRequest;
+import org.springframework.ai.embedding.EmbeddingResponse;
+import org.springframework.ai.embedding.EmbeddingOptions;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Component
+public class DeepSeekEmbeddingModel implements EmbeddingModel {
+
+  private final String apiUrl = "http://13.235.74.30:5000/predict"; // Flask API 地址
+
+  @Override
+  public EmbeddingResponse call(EmbeddingRequest request) {
+    // 获取请求的文本内容
+    String message = request.getInstructions().get(0);
+
+    // 获取文本的嵌入结果
+    List<Float> embeddings = deepSeekEmbeddingInference(message);
+
+    // 返回嵌入的向量响应
+    return new EmbeddingResponse(embeddings);
+  }
+
+  @Override
+  public float[] embed(Document document) {
+    return new float[0];
+  }
+
+  // 使用 Hutool 发送 HTTP 请求并获取响应，模拟 DeepSeek 的嵌入生成
+  private List<Float> deepSeekEmbeddingInference(String message) {
+    HttpResponse response =
+        HttpRequest.post(apiUrl)
+            .header("Content-Type", "application/json")
+            .body("{\"input\": \"" + message + "\", \"embedding\": true}")  // 假设 Flask API 支持返回嵌入向量
+            .execute();
+
+    String responseBody = response.body();
+    List<Float> embeddings = new ArrayList<>();
+
+    // 假设返回的嵌入向量是一个用逗号分隔的字符串
+    String[] embeddingArray = responseBody.split(",");
+    for (String value : embeddingArray) {
+      embeddings.add(Float.parseFloat(value.trim()));  // 将每个值转化为浮动数并添加到列表
+    }
+
+    return embeddings;  // 返回嵌入向量列表
+  }
+
+  @Override
+  public EmbeddingOptions getDefaultOptions() {
+    return new EmbeddingOptions() {
+      @Override
+      public String getModel() {
+        return "DeepSeekModel";  // 默认模型名
+      }
+
+      @Override
+      public Integer getTopK() {
+        return 0;  // 默认值
+      }
+
+      @Override
+      public Double getTemperature() {
+        return 0.0;  // 默认值
+      }
+
+      @Override
+      public List<String> getStopSequences() {
+        return List.of();  // 默认不使用停止符号
+      }
+
+      @Override
+      public Double getFrequencyPenalty() {
+        return 0.0;  // 默认值
+      }
+
+      @Override
+      public Double getPresencePenalty() {
+        return 0.0;  // 默认值
+      }
+
+      @Override
+      public Integer getMaxTokens() {
+        return 0;  // 默认值
+      }
+
+      @Override
+      public Double getTopP() {
+        return 0.0;  // 默认值
+      }
+    }; // 返回默认选项
+  }
+}

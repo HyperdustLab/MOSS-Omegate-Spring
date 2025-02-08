@@ -45,6 +45,7 @@ spring:
       secret-key: xxx
     # openai 需要在pom.xml中放开openai starter的注释
     openai:
+      baseUrl:
       api-key: xxx
     # 智谱清言 同样
     zhipuai:
@@ -54,9 +55,12 @@ spring:
       api-key: xxx
     ollama:
       # 填写模型所在的地址
-      base-url: http://localhost:11434
+      base-url: http://13.235.74.30:7869
       chat:
-        model: xxx
+        model: deepseek-r1:8b
+      embedding:
+        options:
+          model: deepseek-r1:8b
     vectorstore:
       redis:
         initialize-schema: true

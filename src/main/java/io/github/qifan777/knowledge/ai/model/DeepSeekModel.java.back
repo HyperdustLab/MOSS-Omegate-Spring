@@ -1,0 +1,134 @@
+package io.github.qifan777.knowledge.ai.model;
+
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.Generation; // 使用 Spring AI 的 Generation 类
+import org.springframework.ai.chat.prompt.ChatOptions;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
+
+@Component
+public class DeepSeekModel implements ChatModel {
+
+  private final String apiUrl = "http://13.235.74.30:5000/predict"; // Flask API 地址
+
+  @Override
+  public ChatResponse call(Prompt prompt) {
+    String message = prompt.getInstructions().get(0).getContent(); // 使用 getInstructions() 获取消息
+    List<Generation> generations =
+        deepSeekInference(message); // 获取推理结果并封装为 Spring AI 的 Generation 列表
+
+    // 返回包含多个 Generation 的 ChatResponse
+    return new ChatResponse(generations);
+  }
+
+  // 使用 Hutool 发送 HTTP 请求并获取响应
+  private List<Generation> deepSeekInference(String message) {
+    HttpResponse response =
+        HttpRequest.post(apiUrl)
+            .header("Content-Type", "application/json")
+            .body("{\"input\": \"" + message + "\"}")
+            .execute();
+
+    String responseBody = response.body();
+    List<Generation> generations = new ArrayList<>();
+
+    // 假设每个 "\n" 是流中的一段生成文本，分段生成多个 Generation
+    for (String chunk : responseBody.split("\n")) {
+      // 这里将生成的文本封装为 Spring AI 的 Generation 对象
+      Generation generation = new Generation(chunk); // 包装文本
+      generations.add(generation);
+    }
+
+    return generations; // 返回包含多个 Generation 的列表
+  }
+
+  @Override
+  public ChatOptions getDefaultOptions() {
+    return new ChatOptions() {
+      @Override
+      public String getModel() {
+        return "";
+      }
+
+      @Override
+      public Double getFrequencyPenalty() {
+        return 0.0;
+      }
+
+      @Override
+      public Integer getMaxTokens() {
+        return 0;
+      }
+
+      @Override
+      public Double getPresencePenalty() {
+        return 0.0;
+      }
+
+      @Override
+      public List<String> getStopSequences() {
+        return List.of();
+      }
+
+      @Override
+      public Double getTemperature() {
+        return 0.0;
+      }
+
+      @Override
+      public Integer getTopK() {
+        return 0;
+      }
+
+      @Override
+      public Double getTopP() {
+        return 0.0;
+      }
+
+      @Override
+      public ChatOptions copy() {
+        return null;
+      }
+    }; // 配置默认选项
+  }
+
+  // 真正的流式推理实现
+  @Override
+  public Flux<ChatResponse> stream(Prompt prompt) {
+    return Flux.create(
+        sink -> {
+          try {
+            String message = prompt.getInstructions().get(0).getContent(); // 获取消息
+            HttpResponse response =
+                HttpRequest.post(apiUrl)
+                    .header("Content-Type", "application/json")
+                    .body("{\"input\": \"" + message + "\", \"stream\": true}")
+                    .execute();
+
+            // 获取流式响应
+            String responseBody = response.body();
+            String[] responseChunks = responseBody.split("\n"); // 假设每行代表一个生成的片段
+
+            // 遍历每个生成的片段并逐步发送给客户端
+            for (String chunk : responseChunks) {
+              // 逐步返回生成文本
+              Generation generation = new Generation(chunk); // 每个片段作为一个 Generation 封装
+              ChatResponse chatResponse =
+                  new ChatResponse(Arrays.asList(generation)); // 封装为 ChatResponse
+              sink.next(chatResponse); // 发送生成的部分给客户端
+            }
+
+            sink.complete(); // 完成流式响应
+          } catch (Exception e) {
+            sink.error(e); // 出现错误时返回
+          }
+        });
+  }
+}
