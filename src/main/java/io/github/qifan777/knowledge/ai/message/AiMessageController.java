@@ -143,11 +143,9 @@ public class AiMessageController {
     // question_answer_context是一个占位符，会替换成向量数据库中查询到的文档。QuestionAnswerAdvisor会替换。
     String promptWithContext =
         """
-                下面是上下文信息
                 ---------------------
                 {question_answer_context}
                 ---------------------
-                给定的上下文和提供的历史信息，而不是事先的知识，回复用户的意见。如果答案不在上下文中，告诉用户你不能回答这个问题。
                 """;
     advisorSpec.advisors(
         new QuestionAnswerAdvisor(vectorStore, SearchRequest.defaults(), promptWithContext));
@@ -164,7 +162,7 @@ public class AiMessageController {
     Message message =
         new PromptTemplate(
                 """
-                已下内容是额外的知识，在你回答问题时可以参考下面的内容
+                The following content is additional knowledge. You can refer to it when answering questions.
                 ---------------------
                 {context}
                 ---------------------
