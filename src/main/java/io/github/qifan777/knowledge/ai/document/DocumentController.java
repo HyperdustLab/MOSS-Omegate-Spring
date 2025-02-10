@@ -1,5 +1,6 @@
 package io.github.qifan777.knowledge.ai.document;
 
+import cn.dev33.satoken.stp.StpUtil;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
@@ -19,7 +20,6 @@ import org.springframework.web.multipart.MultipartFile;
 @AllArgsConstructor
 public class DocumentController {
 
-
   private final VectorStore vectorStore;
 
   /**
@@ -32,14 +32,20 @@ public class DocumentController {
   @PostMapping("embedding")
   public Boolean embedding(@RequestParam MultipartFile file) {
     // 从IO流中读取文件
-    TikaDocumentReader tikaDocumentReader = new TikaDocumentReader(
-        new InputStreamResource(file.getInputStream()));
+    TikaDocumentReader tikaDocumentReader =
+        new TikaDocumentReader(new InputStreamResource(file.getInputStream()));
     // 将文本内容划分成更小的块
-    List<Document> splitDocuments = new TokenTextSplitter()
-        .apply(tikaDocumentReader.read());
+    List<Document> splitDocuments = new TokenTextSplitter().apply(tikaDocumentReader.read());
+
+    String userId = (String) StpUtil.getLoginId();
+
+    // 为每个文档添加用户ID
+    for (Document doc : splitDocuments) {
+      doc.getMetadata().put("userId", userId); // 将用户ID存入文档的元数据中
+    }
+
     // 存入向量数据库，这个过程会自动调用embeddingModel,将文本变成向量再存入。
     vectorStore.add(splitDocuments);
     return true;
   }
-
 }

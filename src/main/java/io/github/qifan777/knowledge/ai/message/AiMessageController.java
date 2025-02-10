@@ -1,5 +1,6 @@
 package io.github.qifan777.knowledge.ai.message;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.qifan777.knowledge.ai.agent.Agent;
 import io.github.qifan777.knowledge.ai.message.dto.AiMessageInput;
@@ -20,6 +21,8 @@ import org.springframework.ai.model.Media;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.Filter.Expression;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
@@ -140,6 +143,17 @@ public class AiMessageController {
 
   public void useVectorStore(ChatClient.AdvisorSpec advisorSpec, Boolean enableVectorStore) {
     if (!enableVectorStore) return;
+
+    String userId = (String) StpUtil.getLoginId();
+
+    FilterExpressionBuilder b = new FilterExpressionBuilder();
+
+    Expression exp = b.eq("userId", userId).build();
+
+    log.info("filterExpression: {}", exp);
+
+    SearchRequest searchRequest = SearchRequest.defaults().withFilterExpression(exp);
+
     // question_answer_context是一个占位符，会替换成向量数据库中查询到的文档。QuestionAnswerAdvisor会替换。
     String promptWithContext =
         """
@@ -147,8 +161,7 @@ public class AiMessageController {
                 {question_answer_context}
                 ---------------------
                 """;
-    advisorSpec.advisors(
-        new QuestionAnswerAdvisor(vectorStore, SearchRequest.defaults(), promptWithContext));
+    advisorSpec.advisors(new QuestionAnswerAdvisor(vectorStore, searchRequest, promptWithContext));
   }
 
   @SneakyThrows
