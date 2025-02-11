@@ -30,14 +30,12 @@ public class DocumentController {
    */
   @SneakyThrows
   @PostMapping("embedding")
-  public Boolean embedding(@RequestParam MultipartFile file) {
+  public Boolean embedding(@RequestParam MultipartFile file, @RequestParam String userId) {
     // 从IO流中读取文件
     TikaDocumentReader tikaDocumentReader =
         new TikaDocumentReader(new InputStreamResource(file.getInputStream()));
     // 将文本内容划分成更小的块
     List<Document> splitDocuments = new TokenTextSplitter().apply(tikaDocumentReader.read());
-
-    String userId = (String) StpUtil.getLoginId();
 
     // 为每个文档添加用户ID
     for (Document doc : splitDocuments) {

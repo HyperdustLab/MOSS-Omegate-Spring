@@ -1,6 +1,6 @@
 package io.github.qifan777.knowledge.ai.message;
 
-import cn.dev33.satoken.stp.StpUtil;
+import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.qifan777.knowledge.ai.agent.Agent;
 import io.github.qifan777.knowledge.ai.message.dto.AiMessageInput;
@@ -17,19 +17,17 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.image.ImageModel;
 import org.springframework.ai.model.Media;
-import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter.Expression;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.context.ApplicationContext;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
 @RequestMapping("message")
@@ -39,7 +37,7 @@ import reactor.core.publisher.Flux;
 public class AiMessageController {
   private final AiMessageChatMemory chatMemory;
   private final ChatModel chatModel;
-  //    private final ImageModel imageModel;
+  private final ImageModel imageModel;
   private final VectorStore vectorStore;
   private final ObjectMapper objectMapper;
   private final AiMessageRepository messageRepository;
@@ -80,7 +78,7 @@ public class AiMessageController {
   @SneakyThrows
   @PostMapping(value = "chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   public Flux<ServerSentEvent<String>> chat(
-      @RequestPart String input, @RequestPart(required = false) MultipartFile file) {
+      @RequestPart String input, @RequestPart(required = false) String content) {
     AiMessageWrapper aiMessageWrapper = objectMapper.readValue(input, AiMessageWrapper.class);
     String[] functionBeanNames = new String[0];
     // 如果启用Agent则获取Agent的bean
@@ -94,7 +92,7 @@ public class AiMessageController {
     return ChatClient.create(chatModel)
         .prompt()
         // 启用文件问答
-        .system(promptSystemSpec -> useFile(promptSystemSpec, file))
+        .system(promptSystemSpec -> useFile(promptSystemSpec, content))
         .user(promptUserSpec -> toPrompt(promptUserSpec, aiMessageWrapper.getMessage()))
         // agent列表
         .functions(functionBeanNames)
@@ -103,7 +101,10 @@ public class AiMessageController {
               // 使用历史消息
               useChatHistory(advisorSpec, aiMessageWrapper.getMessage().getSessionId());
               // 使用向量数据库
-              useVectorStore(advisorSpec, aiMessageWrapper.getParams().getEnableVectorStore());
+              useVectorStore(
+                  advisorSpec,
+                  aiMessageWrapper.getParams().getEnableVectorStore(),
+                  aiMessageWrapper.getParams().getUserId());
             })
         .stream()
         .chatResponse()
@@ -141,10 +142,9 @@ public class AiMessageController {
     advisorSpec.advisors(new MessageChatMemoryAdvisor(chatMemory, sessionId, 10));
   }
 
-  public void useVectorStore(ChatClient.AdvisorSpec advisorSpec, Boolean enableVectorStore) {
+  public void useVectorStore(
+      ChatClient.AdvisorSpec advisorSpec, Boolean enableVectorStore, String userId) {
     if (!enableVectorStore) return;
-
-    String userId = (String) StpUtil.getLoginId();
 
     FilterExpressionBuilder b = new FilterExpressionBuilder();
 
@@ -165,13 +165,11 @@ public class AiMessageController {
   }
 
   @SneakyThrows
-  public void useFile(ChatClient.PromptSystemSpec spec, MultipartFile file) {
-    if (file == null) return;
-    String content =
-        new TikaDocumentReader(new InputStreamResource(file.getInputStream()))
-            .get()
-            .get(0)
-            .getContent();
+  public void useFile(ChatClient.PromptSystemSpec spec, String content) {
+
+    if (StrUtil.isBlank(content)) {
+      return;
+    }
     Message message =
         new PromptTemplate(
                 """
