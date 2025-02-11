@@ -21,23 +21,32 @@ import redis.clients.jedis.JedisPooled;
 @AllArgsConstructor
 public class RedisVectorConfig {
 
-    /**
-     * 创建RedisStack向量数据库
-     *
-     * @param embeddingModel 嵌入模型
-     * @param properties     redis-stack的配置信息
-     * @return vectorStore 向量数据库
-     */
-    @Bean
-    public VectorStore vectorStore(EmbeddingModel embeddingModel,
-                                   RedisVectorStoreProperties properties,
-                                   RedisConnectionDetails redisConnectionDetails) {
-        RedisVectorStore.RedisVectorStoreConfig config = RedisVectorStore.RedisVectorStoreConfig.builder().withIndexName(properties.getIndex()).withPrefix(properties.getPrefix()).build();
-        return new RedisVectorStore(config, embeddingModel,
-                new JedisPooled(redisConnectionDetails.getStandalone().getHost(),
-                        redisConnectionDetails.getStandalone().getPort()
-                        , redisConnectionDetails.getUsername(),
-                        redisConnectionDetails.getPassword()),
-                properties.isInitializeSchema());
-    }
+  /**
+   * 创建RedisStack向量数据库
+   *
+   * @param embeddingModel 嵌入模型
+   * @param properties redis-stack的配置信息
+   * @return vectorStore 向量数据库
+   */
+  @Bean
+  public VectorStore vectorStore(
+      EmbeddingModel embeddingModel,
+      RedisVectorStoreProperties properties,
+      RedisConnectionDetails redisConnectionDetails) {
+    RedisVectorStore.RedisVectorStoreConfig config =
+        RedisVectorStore.RedisVectorStoreConfig.builder()
+            .withMetadataFields(RedisVectorStore.MetadataField.text("userId"))
+            .withIndexName(properties.getIndex())
+            .withPrefix(properties.getPrefix())
+            .build();
+    return new RedisVectorStore(
+        config,
+        embeddingModel,
+        new JedisPooled(
+            redisConnectionDetails.getStandalone().getHost(),
+            redisConnectionDetails.getStandalone().getPort(),
+            redisConnectionDetails.getUsername(),
+            redisConnectionDetails.getPassword()),
+        properties.isInitializeSchema());
+  }
 }
