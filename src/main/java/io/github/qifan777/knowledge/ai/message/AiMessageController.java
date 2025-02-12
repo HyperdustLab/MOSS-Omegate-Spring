@@ -1,6 +1,7 @@
 package io.github.qifan777.knowledge.ai.message;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.qifan777.knowledge.ai.agent.Agent;
 import io.github.qifan777.knowledge.ai.message.dto.AiMessageInput;
@@ -17,7 +18,6 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.PromptTemplate;
-import org.springframework.ai.image.ImageModel;
 import org.springframework.ai.model.Media;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -37,7 +37,7 @@ import reactor.core.publisher.Flux;
 public class AiMessageController {
   private final AiMessageChatMemory chatMemory;
   private final ChatModel chatModel;
-  private final ImageModel imageModel;
+  //  private final ImageModel imageModel;
   private final VectorStore vectorStore;
   private final ObjectMapper objectMapper;
   private final AiMessageRepository messageRepository;
@@ -78,7 +78,7 @@ public class AiMessageController {
   @SneakyThrows
   @PostMapping(value = "chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   public Flux<ServerSentEvent<String>> chat(
-      @RequestPart String input, @RequestPart(required = false) String content) {
+      @RequestParam String input, @RequestParam(required = false) String content) {
     AiMessageWrapper aiMessageWrapper = objectMapper.readValue(input, AiMessageWrapper.class);
     String[] functionBeanNames = new String[0];
     // 如果启用Agent则获取Agent的bean
@@ -114,6 +114,52 @@ public class AiMessageController {
                     // 和前端监听的事件相对应
                     .event("message")
                     .build());
+  }
+
+  /**
+   * 不通过流的形式完成推理
+   *
+   * @param input 消息内容（文本，图片，等）
+   * @param content 文件内容（如果需要的话）
+   * @return ChatResponse 推理结果
+   */
+  @SneakyThrows
+  @PostMapping(value = "chat-sync")
+  public ChatResponse chatSync(
+      @RequestParam String input, @RequestParam(required = false) String content) {
+
+    // 将传入的 input JSON 字符串解析为 AiMessageWrapper 对象
+    AiMessageWrapper aiMessageWrapper = JSONUtil.toBean(input, AiMessageWrapper.class);
+    // 获取 functionBeanNames（Agent 支持功能）
+    String[] functionBeanNames = new String[0];
+    if (aiMessageWrapper.getParams().getEnableAgent()) {
+      Map<String, Object> beansWithAnnotation =
+          applicationContext.getBeansWithAnnotation(Agent.class);
+      functionBeanNames = new String[beansWithAnnotation.size()];
+      functionBeanNames = beansWithAnnotation.keySet().toArray(functionBeanNames);
+    }
+
+    // 使用 ChatClient 创建一个同步推理请求
+    ChatResponse chatResponse =
+        ChatClient.create(chatModel)
+            .prompt()
+            .system(promptSystemSpec -> useFile(promptSystemSpec, content)) // 启用文件问答
+            .user(promptUserSpec -> toPrompt(promptUserSpec, aiMessageWrapper.getMessage())) // 用户消息
+            .functions(functionBeanNames)
+            .advisors(
+                advisorSpec -> {
+                  useChatHistory(
+                      advisorSpec, aiMessageWrapper.getMessage().getSessionId()); // 使用历史消息
+                  useVectorStore(
+                      advisorSpec,
+                      aiMessageWrapper.getParams().getEnableVectorStore(),
+                      aiMessageWrapper.getParams().getUserId()); // 使用向量数据库
+                })
+            .call()
+            .chatResponse();
+
+    // 返回最终的推理结果
+    return chatResponse;
   }
 
   @SneakyThrows

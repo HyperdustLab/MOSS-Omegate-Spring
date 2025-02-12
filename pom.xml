@@ -68,6 +68,14 @@
       <groupId>io.github.qifan777</groupId>
       <artifactId>spring-boot-starter-oss</artifactId>
     </dependency>
+
+    <dependency>
+      <groupId>org.apache.httpcomponents.client5</groupId>
+      <artifactId>httpclient5-fluent</artifactId>
+      <version>5.4.2</version>
+    </dependency>
+
+
     <!--      根据自己的需要开启响应厂商的配置-->
     <!--        <dependency>-->
     <!--            <groupId>org.springframework.ai</groupId>-->
@@ -132,11 +140,11 @@
       <artifactId>sa-token-redis-jackson</artifactId>
       <version>${sa-token.version}</version>
     </dependency>
-<!--    <dependency>-->
-<!--      <groupId>cn.dev33</groupId>-->
-<!--      <artifactId>sa-token-spring-boot3-starter</artifactId>-->
-<!--      <version>${sa-token.version}</version>-->
-<!--    </dependency>-->
+    <!--    <dependency>-->
+    <!--      <groupId>cn.dev33</groupId>-->
+    <!--      <artifactId>sa-token-spring-boot3-starter</artifactId>-->
+    <!--      <version>${sa-token.version}</version>-->
+    <!--    </dependency>-->
   </dependencies>
   <dependencyManagement>
     <dependencies>
@@ -183,20 +191,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <annotationProcessorPaths>
-            <path>
-              <artifactId>jimmer-apt</artifactId>
-              <groupId>org.babyfish.jimmer</groupId>
-              <version>${jimmer.version}</version>
-            </path>
-            <path>
-              <artifactId>lombok</artifactId>
-              <groupId>org.projectlombok</groupId>
-              <version>${lombok.version}</version>
-            </path>
-          </annotationProcessorPaths>
-        </configuration>
       </plugin>
     </plugins>
   </build>

@@ -10,7 +10,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @EnableImplicitApi
 @EnableConfigurationProperties(CodeAssistantProperties.class)
 public class ServerApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(ServerApplication.class, args);
-    }
+  public static void main(String[] args) {
+
+    SpringApplication.run(ServerApplication.class, args);
+  }
 }
