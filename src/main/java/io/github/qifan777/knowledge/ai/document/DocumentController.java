@@ -38,45 +38,44 @@ public class DocumentController {
   @PostMapping("embedding")
   public Boolean embedding(@RequestParam List<MultipartFile> files, @RequestParam String userId) {
 
-        FilterExpressionBuilder b = new FilterExpressionBuilder();
+    FilterExpressionBuilder b = new FilterExpressionBuilder();
 
-        Expression exp = b.eq("userId", userId).build();
+    Expression exp = b.eq("userId", userId).build();
 
-        log.info("filterExpression: {}", exp);
+    log.info("filterExpression: {}", exp);
 
-        SearchRequest searchRequest = SearchRequest.defaults().withFilterExpression(exp);
+    SearchRequest searchRequest = SearchRequest.defaults().withFilterExpression(exp);
 
-        List<Document> documentList = vectorStore.similaritySearch(searchRequest);
+    List<Document> documentList = vectorStore.similaritySearch(searchRequest);
 
-        List<String> deleteIds = documentList.stream().map(Document::getId).toList();
+    List<String> deleteIds = documentList.stream().map(Document::getId).toList();
 
-        // 先删除该用户之前的内容
-        vectorStore.delete(deleteIds);
+    // 先删除该用户之前的内容
+    vectorStore.delete(deleteIds);
 
-        List<Document> allDocuments = new ArrayList<>();
+    List<Document> allDocuments = new ArrayList<>();
 
-        for (MultipartFile file : files) {
-          // 从IO流中读取文件
-          TikaDocumentReader tikaDocumentReader =
-              new TikaDocumentReader(new InputStreamResource(file.getInputStream()));
+    for (MultipartFile file : files) {
+      // 从IO流中读取文件
+      TikaDocumentReader tikaDocumentReader =
+          new TikaDocumentReader(new InputStreamResource(file.getInputStream()));
 
-          // 将文本内容划分成更小的块
-          List<Document> splitDocuments = new
-              TokenTextSplitter().apply(tikaDocumentReader.read());
+      // 将文本内容划分成更小的块
+      List<Document> splitDocuments = new TokenTextSplitter().apply(tikaDocumentReader.read());
 
-          // 为每个文档添加用户ID
-          for (Document doc : splitDocuments) {
-            doc.getMetadata().put("userId", userId);
-          }
+      // 为每个文档添加用户ID
+      for (Document doc : splitDocuments) {
+        doc.getMetadata().put("userId", userId);
+      }
 
-          allDocuments.addAll(splitDocuments);
-        }
+      allDocuments.addAll(splitDocuments);
+    }
 
-        log.info("allDocuments: {}", allDocuments);
-        // 存入向量数据库
-        vectorStore.add(allDocuments);
+    log.info("allDocuments: {}", allDocuments);
+    // 存入向量数据库
+    vectorStore.add(allDocuments);
 
-        log.info("embedding success");
+    log.info("embedding success");
 
     return true;
   }

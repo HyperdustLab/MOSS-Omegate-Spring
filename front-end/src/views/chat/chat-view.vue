@@ -11,6 +11,8 @@ import { SSE } from 'sse.js'
 import { type AiMessage, useChatStore } from './store/chat-store'
 import type { AiMessageParams, AiMessageWrapper } from '@/apis/__generated/model/static'
 
+import { request } from '@/utils/request'
+
 type ChatResponse = {
   metadata: {
     usage: {
@@ -34,6 +36,8 @@ const { activeSession, sessionList, isEdit } = storeToRefs(chatStore)
 const messageListRef = ref<InstanceType<typeof HTMLDivElement>>()
 const loading = ref(true)
 
+const systemPrompt = ref('')
+
 onMounted(async () => {
   // 查询自己的聊天会话
   api.aiSessionController.findByUser().then((res) => {
@@ -49,6 +53,8 @@ onMounted(async () => {
     }
     loading.value = false
   })
+
+  getSystemPrompt()
 })
 
 // ChatGPT的回复
@@ -57,7 +63,7 @@ const responseMessage = ref<AiMessage>({
   type: 'ASSISTANT',
   medias: [],
   textContent: '',
-  sessionId: ''
+  sessionId: '',
 })
 
 const handleSendMessage = async (message: { text: string; image: string }) => {
@@ -76,7 +82,7 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
     sessionId: activeSession.value.id,
     medias,
     textContent: message.text,
-    type: 'USER'
+    type: 'USER',
   } satisfies AiMessage
 
   responseMessage.value = {
@@ -84,11 +90,12 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
     medias: [],
     type: 'ASSISTANT',
     textContent: '',
-    sessionId: activeSession.value.id
+    sessionId: activeSession.value.id,
   }
   const body: AiMessageWrapper = { message: chatMessage, params: options.value }
   const form = new FormData()
   form.set('input', JSON.stringify(body))
+  form.set('content', systemPrompt.value)
 
   if (fileList.value.length && fileList.value[0].raw) {
     form.append('file', fileList.value[0].raw)
@@ -98,7 +105,7 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
     // 禁用自动启动，需要调用stream()方法才能发起请求
     start: false,
     payload: form as any,
-    method: 'POST'
+    method: 'POST',
   })
   evtSource.addEventListener('message', async (event: any) => {
     const response = JSON.parse(event.data) as ChatResponse
@@ -133,7 +140,7 @@ const handleSessionCreate = () => {
 }
 const options = ref<AiMessageParams>({
   enableVectorStore: false,
-  enableAgent: false
+  enableAgent: false,
 })
 const embeddingLoading = ref(false)
 const onUploadSuccess = () => {
@@ -144,6 +151,16 @@ const beforeUpload: UploadProps['beforeUpload'] = () => {
   embeddingLoading.value = true
   return true
 }
+
+async function getSystemPrompt() {
+  const data = await request({
+    url: '/user/getSystemPrompt',
+    method: 'GET',
+  })
+
+  systemPrompt.value = data
+}
+
 const fileList = ref<UploadUserFile[]>([])
 </script>
 <template>
@@ -156,24 +173,10 @@ const fileList = ref<UploadUserFile[]>([])
         <div class="title">AI助手</div>
         <div class="session-list" v-if="activeSession">
           <!-- for循环遍历会话列表用会话组件显示，并监听点击事件和删除事件。点击时切换到被点击的会话，删除时从会话列表中提出被删除的会话。 -->
-          <session-item
-            v-for="session in sessionList"
-            :key="session.id"
-            :active="session.id === activeSession.id"
-            :session="session"
-            class="session"
-            @click="activeSession = session"
-            @delete="handleDeleteSession"
-          ></session-item>
+          <session-item v-for="session in sessionList" :key="session.id" :active="session.id === activeSession.id" :session="session" class="session" @click="activeSession = session" @delete="handleDeleteSession"></session-item>
         </div>
         <div class="button-wrapper">
-          <el-button
-            style="margin-right: 20px"
-            :icon="ChatRound"
-            size="small"
-            @click="handleSessionCreate"
-            >创建会话
-          </el-button>
+          <el-button style="margin-right: 20px" :icon="ChatRound" size="small" @click="handleSessionCreate">创建会话 </el-button>
         </div>
       </div>
       <!-- 右侧的消息记录 -->
@@ -184,10 +187,7 @@ const fileList = ref<UploadUserFile[]>([])
             <!-- 如果处于编辑状态则显示输入框让用户去修改 -->
             <div v-if="isEdit" class="title">
               <!-- 按回车代表确认修改 -->
-              <el-input
-                v-model="activeSession.name"
-                @keydown.enter="handleUpdateSession"
-              ></el-input>
+              <el-input v-model="activeSession.name" @keydown.enter="handleUpdateSession"></el-input>
             </div>
             <!-- 否则正常显示标题 -->
             <div v-else class="title">{{ activeSession.name }}</div>
@@ -210,11 +210,7 @@ const fileList = ref<UploadUserFile[]>([])
         <div ref="messageListRef" class="message-list">
           <!-- 过渡效果 -->
           <transition-group name="list" v-if="activeSession">
-            <message-row
-              v-for="message in activeSession.messages"
-              :key="message.id"
-              :message="message"
-            ></message-row>
+            <message-row v-for="message in activeSession.messages" :key="message.id" :message="message"></message-row>
           </transition-group>
         </div>
         <!-- 监听发送事件 -->
@@ -223,13 +219,7 @@ const fileList = ref<UploadUserFile[]>([])
       <div class="option-panel">
         <el-form size="small">
           <el-form-item>
-            <el-upload
-              v-loading="embeddingLoading"
-              :action="`${API_PREFIX}/document/embedding`"
-              :show-file-list="false"
-              :on-success="onUploadSuccess"
-              :before-upload="beforeUpload"
-            >
+            <el-upload v-loading="embeddingLoading" :action="`${API_PREFIX}/document/embedding`" :show-file-list="false" :on-success="onUploadSuccess" :before-upload="beforeUpload">
               <el-button type="primary">上传文档</el-button>
             </el-upload>
           </el-form-item>
