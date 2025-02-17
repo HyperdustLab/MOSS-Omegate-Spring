@@ -105,12 +105,19 @@ public class AiMessageController {
       functionBeanNames = beansWithAnnotation.keySet().toArray(functionBeanNames);
     }
     String finalUserId = userId;
+
+    // 启用文件问答
+    // agent列表`
+    // 使用历史消息
+    // 使用向量数据库
+    // 和前端监听的事件相对应
+
     return ChatClient.create(chatModel)
         .prompt()
         // 启用文件问答
         .system(promptSystemSpec -> useFile(promptSystemSpec, content))
         .user(promptUserSpec -> toPrompt(promptUserSpec, aiMessageWrapper.getMessage()))
-        // agent列表
+        // agent列表`
         .functions(functionBeanNames)
         .advisors(
             advisorSpec -> {
@@ -129,6 +136,53 @@ public class AiMessageController {
                     .event("message")
                     .build());
   }
+
+  //  /**
+  //   * 不通过流的形式完成推理
+  //   *
+  //   * @param input 消息内容（文本，图片，等）
+  //   * @param content 文件内容（如果需要的话）
+  //   * @return ChatResponse 推理结果
+  //   */
+  //  @SneakyThrows
+  //  @PostMapping(value = "chat-sync", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+  //  public ChatResponse chatSync(
+  //      @RequestParam String input, @RequestParam(required = false) String content) {
+  //
+  //    // 将传入的 input JSON 字符串解析为 AiMessageWrapper 对象
+  //    AiMessageWrapper aiMessageWrapper = JSONUtil.toBean(input, AiMessageWrapper.class);
+  //    // 获取 functionBeanNames（Agent 支持功能）
+  //    String[] functionBeanNames = new String[0];
+  //    if (aiMessageWrapper.getParams().getEnableAgent()) {
+  //      Map<String, Object> beansWithAnnotation =
+  //          applicationContext.getBeansWithAnnotation(Agent.class);
+  //      functionBeanNames = new String[beansWithAnnotation.size()];
+  //      functionBeanNames = beansWithAnnotation.keySet().toArray(functionBeanNames);
+  //    }
+  //
+  //    // 使用 ChatClient 创建一个同步推理请求
+  //    ChatResponse chatResponse =
+  //        ChatClient.create(chatModel)
+  //            .prompt()
+  //            .system(promptSystemSpec -> useFile(promptSystemSpec, content)) // 启用文件问答
+  //            .user(promptUserSpec -> toPrompt(promptUserSpec, aiMessageWrapper.getMessage()))
+  //            //
+  //            .functions(functionBeanNames)
+  //            .advisors(
+  //                advisorSpec -> {
+  //                  useChatHistory(
+  //                      advisorSpec, aiMessageWrapper.getMessage().getSessionId()); // 使用历史消息
+  //                  useVectorStore(
+  //                      advisorSpec,
+  //                      aiMessageWrapper.getParams().getEnableVectorStore(),
+  //                      aiMessageWrapper.getParams().getUserId()); // 使用向量数据库
+  //                })
+  //            .call()
+  //            .chatResponse();
+  //
+  //    // 返回最终的推理结果
+  //    return chatResponse;
+  //  }
 
   @SneakyThrows
   public String toJson(ChatResponse response) {

@@ -1,6 +1,7 @@
 spring:
   application:
     name: knowledge-base
+
   data:
     redis:
       database: 0

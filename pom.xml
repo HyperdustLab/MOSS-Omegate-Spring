@@ -67,6 +67,12 @@
     <dependency>
       <groupId>io.github.qifan777</groupId>
       <artifactId>spring-boot-starter-oss</artifactId>
+      <exclusions>
+        <exclusion>
+          <artifactId>httpclient</artifactId>
+          <groupId>org.apache.httpcomponents</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <!--      根据自己的需要开启响应厂商的配置-->
     <!--        <dependency>-->
