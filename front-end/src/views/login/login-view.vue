@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ElAvatar, ElButton, ElCard, ElCol, ElForm, ElFormItem, ElInput, ElRow, type FormInstance, type FormRules } from 'element-plus'
 import { onMounted, reactive, ref, Transition } from 'vue'
-import logo from '@/assets/logo.jpg'
+import logo from '@/assets/logo.png'
 import router from '@/router'
 import background from '@/assets/background.jpg'
 import { api } from '@/utils/api-instance'

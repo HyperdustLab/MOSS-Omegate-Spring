@@ -1,5 +1,7 @@
 package io.github.qifan777.knowledge.ai.document;
 
+import cn.dev33.satoken.stp.StpUtil;
+import cn.hutool.core.util.StrUtil;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -36,8 +38,18 @@ public class DocumentController {
    */
   @SneakyThrows
   @PostMapping("embedding")
-  public Boolean embedding(@RequestParam List<MultipartFile> files, @RequestParam String userId) {
+  public Boolean embedding(
+      @RequestParam List<MultipartFile> files, @RequestParam(required = false) String userId) {
 
+    try {
+      userId = (String) StpUtil.getLoginId();
+    } catch (Exception ignored) {
+
+      if (StrUtil.isBlank(userId)) {
+        log.error("userId is empty");
+        return false;
+      }
+    }
     FilterExpressionBuilder b = new FilterExpressionBuilder();
 
     Expression exp = b.eq("userId", userId).build();

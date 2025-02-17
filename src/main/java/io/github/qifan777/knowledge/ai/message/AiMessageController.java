@@ -114,11 +114,11 @@ public class AiMessageController {
 
     return ChatClient.create(chatModel)
         .prompt()
-        // 启用文件问答
-        .system(promptSystemSpec -> useFile(promptSystemSpec, content))
-        .user(promptUserSpec -> toPrompt(promptUserSpec, aiMessageWrapper.getMessage()))
+
         // agent列表`
         .functions(functionBeanNames)
+        // 启用文件问答
+        .system(promptSystemSpec -> useFile(promptSystemSpec, content))
         .advisors(
             advisorSpec -> {
               // 使用历史消息
@@ -127,6 +127,7 @@ public class AiMessageController {
               useVectorStore(
                   advisorSpec, aiMessageWrapper.getParams().getEnableVectorStore(), finalUserId);
             })
+        .user(promptUserSpec -> toPrompt(promptUserSpec, aiMessageWrapper.getMessage()))
         .stream()
         .chatResponse()
         .map(
@@ -229,6 +230,7 @@ public class AiMessageController {
                 {question_answer_context}
                 ---------------------
                 """;
+
     advisorSpec.advisors(new QuestionAnswerAdvisor(vectorStore, searchRequest, promptWithContext));
   }
 

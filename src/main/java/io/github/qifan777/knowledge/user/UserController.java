@@ -4,6 +4,7 @@ import cn.dev33.satoken.secure.BCrypt;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.http.HttpRequest;
+import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import io.github.qifan777.knowledge.user.dto.UserRegisterInput;
 import io.qifan.infrastructure.common.exception.BusinessException;
@@ -81,5 +82,43 @@ public class UserController {
     JSONObject json = new JSONObject(body);
 
     return json.getStr("result");
+  }
+
+  @GetMapping("/getAgent")
+  public JSONObject getAgent() {
+
+    String userId = (String) StpUtil.getLoginId();
+
+    String token = tokenMap.get(userId);
+    String body =
+        HttpRequest.get(api + "/sys/getCurrUser").header("X-Access-Token", token).execute().body();
+
+    JSONObject agent = new JSONObject();
+
+    JSONObject user = new JSONObject(body).getJSONObject("result");
+
+    agent.set("realname", user.getStr("realName"));
+    agent.set("avatar", user.getStr("avatar"));
+
+    body =
+        HttpRequest.get(api + "/mgn/agent/list")
+            .form("walletAddress", user.getStr("walletAddress"))
+            .header("X-Access-Token", token)
+            .execute()
+            .body();
+
+    JSONArray agents = new JSONObject(body).getJSONObject("result").getJSONArray("records");
+
+    if (!agents.isEmpty()) {
+
+      JSONObject _agent = agents.getJSONObject(0);
+
+      agent.set("agentId", _agent.getStr("sid"));
+      agent.set("agentName", _agent.getStr("nickName"));
+      agent.set("agentAvatar", _agent.getStr("avatar"));
+
+    }
+
+    return agent;
   }
 }
