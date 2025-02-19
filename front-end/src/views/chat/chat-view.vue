@@ -11,6 +11,8 @@ import { SSE } from 'sse.js'
 import { type AiMessage, useChatStore } from './store/chat-store'
 import type { AiMessageParams, AiMessageWrapper } from '@/apis/__generated/model/static'
 
+import user from '@/assets/user.png'
+
 import { request } from '@/utils/request'
 
 type ChatResponse = {
@@ -250,7 +252,7 @@ const fileList = ref<UploadUserFile[]>([])
         <div ref="messageListRef" class="message-list">
           <!-- Transition effect -->
           <transition-group name="list" v-if="activeSession && agent">
-            <message-row v-for="message in activeSession.messages" :agent-avatar="agent.agentAvatar" :avatar="agent.avatar" :key="message.id" :message="message"></message-row>
+            <message-row v-for="message in activeSession.messages" :agent-avatar="agent.agentAvatar" :avatar="agent.avatar || user" :key="message.id" :message="message"></message-row>
           </transition-group>
         </div>
         <!-- Listen for send event -->

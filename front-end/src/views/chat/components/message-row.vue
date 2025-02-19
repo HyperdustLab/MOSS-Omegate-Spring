@@ -25,8 +25,8 @@ const images = computed(() => {
     <div class="row">
       <!-- Avatar -->
       <div class="avatar-wrapper">
-        <el-avatar :src="avatar" class="avatar" shape="square" v-if="message.type === 'USER'" />
-        <el-avatar :src="agentAvatar || logo" class="avatar" shape="square" v-else />
+        <el-avatar :src="avatar" class="avatar" shape="circle" v-if="message.type === 'USER'" />
+        <el-avatar :src="agentAvatar || logo" class="avatar" shape="circle" v-else />
       </div>
       <!-- Sent message or reply message -->
       <div class="message">
