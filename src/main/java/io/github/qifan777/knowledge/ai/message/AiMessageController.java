@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.qifan777.knowledge.ai.agent.Agent;
 import io.github.qifan777.knowledge.ai.message.dto.AiMessageInput;
 import io.github.qifan777.knowledge.ai.message.dto.AiMessageWrapper;
+import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
@@ -19,6 +20,7 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.document.Document;
 import org.springframework.ai.model.Media;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -112,23 +114,36 @@ public class AiMessageController {
     // 使用向量数据库
     // 和前端监听的事件相对应
 
-    return ChatClient.create(chatModel)
-        .prompt()
+    String promptWithContext =
+        "Message[role=SYSTEM, content=The following content is additional knowledge. You can refer to it when answering questions.\\n ---------------------\\n additional knowledge：{}\\n ---------------------\\n Perception System:{}\\n ---------------------\\n , History content：{}images=null, toolCalls=null]\\n Message[role=USER, content={}\\n ---------------------\\n , images=null, toolCalls=null]\"}";
 
-        // agent列表`
-        .functions(functionBeanNames)
-        // 启用文件问答
-        .system(promptSystemSpec -> useFile(promptSystemSpec, content))
-        .advisors(
-            advisorSpec -> {
-              // 使用历史消息
-              useChatHistory(advisorSpec, aiMessageWrapper.getMessage().getSessionId());
-              // 使用向量数据库
-              useVectorStore(
-                  advisorSpec, aiMessageWrapper.getParams().getEnableVectorStore(), finalUserId);
-            })
-        .user(promptUserSpec -> toPrompt(promptUserSpec, aiMessageWrapper.getMessage()))
-        .stream()
+    FilterExpressionBuilder b = new FilterExpressionBuilder();
+
+    Expression exp = b.eq("userId", userId).build();
+
+    log.info("filterExpression: {}", exp);
+
+    SearchRequest searchRequest = SearchRequest.defaults().withFilterExpression(exp);
+
+    List<Document> documentList = vectorStore.similaritySearch(searchRequest);
+
+    List<String> contentList = documentList.stream().map(Document::getContent).toList();
+
+    String additionalKnowledge = String.join("\n", contentList);
+
+    List<Message> messageList = chatMemory.get(aiMessageWrapper.getMessage().getSessionId(), 10);
+
+    String historyContent = StrUtil.join("\n", messageList);
+
+    promptWithContext =
+        StrUtil.format(
+            promptWithContext,
+            additionalKnowledge,
+            content,
+            historyContent,
+            aiMessageWrapper.getMessage().getTextContent());
+
+    return ChatClient.create(chatModel).prompt(promptWithContext).stream()
         .chatResponse()
         .map(
             chatResponse ->
@@ -200,7 +215,7 @@ public class AiMessageController {
       promptUserSpec.media(userMessage.getMedia().toArray(medias));
     }
     // 用户发送的文本
-    promptUserSpec.text(message.getContent());
+    promptUserSpec.text("");
   }
 
   public void useChatHistory(ChatClient.AdvisorSpec advisorSpec, String sessionId) {
@@ -212,7 +227,10 @@ public class AiMessageController {
   }
 
   public void useVectorStore(
-      ChatClient.AdvisorSpec advisorSpec, Boolean enableVectorStore, String userId) {
+      ChatClient.AdvisorSpec advisorSpec,
+      Boolean enableVectorStore,
+      String userId,
+      String inputText) {
     if (!enableVectorStore) return;
 
     FilterExpressionBuilder b = new FilterExpressionBuilder();
@@ -223,15 +241,35 @@ public class AiMessageController {
 
     SearchRequest searchRequest = SearchRequest.defaults().withFilterExpression(exp);
 
-    // question_answer_context是一个占位符，会替换成向量数据库中查询到的文档。QuestionAnswerAdvisor会替换。
-    String promptWithContext =
-        """
-                ---------------------
-                {question_answer_context}
-                ---------------------
-                """;
+    List<Document> documentList = vectorStore.similaritySearch(searchRequest);
+
+    String promptWithContext = "";
+
+    if (documentList.isEmpty()) {
+
+      // question_answer_context是一个占位符，会替换成向量数据库中查询到的文档。QuestionAnswerAdvisor会替换。
+      promptWithContext =
+          """
+                  {question_answer_context}
+                  {inputText}
+                  """;
+    } else {
+      // question_answer_context是一个占位符，会替换成向量数据库中查询到的文档。QuestionAnswerAdvisor会替换。
+      promptWithContext =
+          """
+                  {question_answer_context}
+                  ---------------------
+                  {inputText}
+                  """;
+    }
+
+    promptWithContext = promptWithContext.replaceAll("\\{inputText}", inputText);
+
+    log.info("promptWithContext: {}", promptWithContext);
 
     advisorSpec.advisors(new QuestionAnswerAdvisor(vectorStore, searchRequest, promptWithContext));
+
+    System.out.print("");
   }
 
   @SneakyThrows

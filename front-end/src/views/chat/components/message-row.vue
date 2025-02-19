@@ -35,7 +35,7 @@ const images = computed(() => {
         <!-- If message content is image, display image -->
         <el-image v-for="image in images" :key="image" class="image" fit="cover" :preview-src-list="images" :src="image"></el-image>
         <!-- If message content is empty show loading animation -->
-        <TextLoading v-if="!message.textContent && !images.length"></TextLoading>
+        <TextLoading v-if="!message.textContent && !images.length" style="color: white"></TextLoading>
       </div>
     </div>
   </div>

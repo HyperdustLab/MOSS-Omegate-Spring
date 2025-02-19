@@ -5,10 +5,7 @@ import { api } from '@/utils/api-instance'
 import type { AiMessageInput, AiSessionInput } from '@/apis/__generated/model/static'
 import { ElMessageBox } from 'element-plus'
 
-export type AiSession = Pick<
-  AiSessionDto['AiSessionRepository/FETCHER'],
-  'id' | 'name' | 'editedTime'
-> & {
+export type AiSession = Pick<AiSessionDto['AiSessionRepository/FETCHER'], 'id' | 'name' | 'editedTime'> & {
   messages: AiMessage[]
 }
 
@@ -44,12 +41,12 @@ export const useChatStore = defineStore('ai-chat', () => {
       return
     }
     await api.aiSessionController.save({
-      body: { ...activeSession.value }
+      body: { ...activeSession.value },
     })
     isEdit.value = false
   }
   const handleClearMessage = async (sessionId: string) => {
-    await ElMessageBox.confirm('是否清空会话记录？', '提示')
+    await ElMessageBox.confirm('Clear chat history?', 'Confirm')
     await api.aiMessageController.deleteHistory({ sessionId })
     const index = sessionList.value.findIndex((value) => {
       return value.id === sessionId
@@ -64,6 +61,6 @@ export const useChatStore = defineStore('ai-chat', () => {
     handleUpdateSession,
     handleCreateSession,
     handleDeleteSession,
-    handleClearMessage
+    handleClearMessage,
   }
 })

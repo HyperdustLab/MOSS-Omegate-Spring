@@ -35,7 +35,7 @@ const { handleDeleteSession, handleUpdateSession, handleClearMessage } = chatSto
 const { activeSession, sessionList, isEdit } = storeToRefs(chatStore)
 const messageListRef = ref<InstanceType<typeof HTMLDivElement>>()
 
-const loading = ref(true)
+const loading = ref(false)
 
 const systemPrompt = ref('')
 
@@ -183,7 +183,7 @@ const fileList = ref<UploadUserFile[]>([])
     <div class="chat-panel" v-loading="loading">
       <!-- Left session list -->
       <div class="session-panel">
-        <div class="title">AI Assistant</div>
+        <div class="title">MOSS Call</div>
 
         <div class="button-wrapper">
           <el-button style="margin-right: 20px" :icon="ChatRound" size="small" @click="handleSessionCreate">Create Session</el-button>
@@ -197,7 +197,7 @@ const fileList = ref<UploadUserFile[]>([])
         <div class="option-panel">
           <el-form size="small" v-if="agent && agent.agentId">
             <el-form-item label="Knowledge Base">
-              <el-upload v-loading="embeddingLoading" :action="`${API_PREFIX}/document/embedding`" :show-file-list="false" :on-success="onUploadSuccess" :before-upload="beforeUpload">
+              <el-upload v-loading="embeddingLoading" multiple name="files" :action="`${API_PREFIX}/document/embedding`" :show-file-list="false" :on-success="onUploadSuccess" :before-upload="beforeUpload">
                 <el-button type="primary">
                   <p style="color: white">Upload Document</p>
                 </el-button>
