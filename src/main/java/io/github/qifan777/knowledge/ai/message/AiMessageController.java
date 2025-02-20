@@ -143,6 +143,8 @@ public class AiMessageController {
             historyContent,
             aiMessageWrapper.getMessage().getTextContent());
 
+    log.info("promptWithContext: {}", promptWithContext);
+
     return ChatClient.create(chatModel).prompt(promptWithContext).stream()
         .chatResponse()
         .map(
