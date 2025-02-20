@@ -13,7 +13,32 @@ import enUs from 'element-plus/dist/locale/en.mjs'
   </el-config-provider>
 </template>
 
-<style>
+<style lang="scss">
+.dark-message-box {
+  background-color: #141414;
+  border-color: #4c4d4f;
+
+  .el-message-box__title {
+    color: #ffffff;
+  }
+
+  .el-message-box__content {
+    color: #ffffff;
+  }
+
+  .el-message-box__btns {
+    .el-button {
+      background-color: #626262;
+      border-color: #4c4d4f;
+      color: #ffffff;
+
+      &:hover {
+        background-color: #8a8a8a;
+      }
+    }
+  }
+}
+
 body {
   margin: 0;
   font-family:

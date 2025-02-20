@@ -46,7 +46,9 @@ export const useChatStore = defineStore('ai-chat', () => {
     isEdit.value = false
   }
   const handleClearMessage = async (sessionId: string) => {
-    await ElMessageBox.confirm('Clear chat history?', 'Confirm')
+    await ElMessageBox.confirm('Clear chat history?', 'Confirm', {
+      customClass: 'dark-message-box',
+    })
     await api.aiMessageController.deleteHistory({ sessionId })
     const index = sessionList.value.findIndex((value) => {
       return value.id === sessionId
