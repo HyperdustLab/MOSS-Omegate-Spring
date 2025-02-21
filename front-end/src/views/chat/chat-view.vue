@@ -10,11 +10,13 @@ import { api } from '@/utils/api-instance'
 import { SSE } from 'sse.js'
 import { type AiMessage, useChatStore } from './store/chat-store'
 import type { AiMessageParams, AiMessageWrapper } from '@/apis/__generated/model/static'
+import Login from '@/components/Login/index.vue'
 
 import user from '@/assets/user.png'
 
 import { request } from '@/utils/request'
 
+import { useRoute } from 'vue-router'
 type ChatResponse = {
   metadata: {
     usage: {
@@ -39,6 +41,8 @@ const messageListRef = ref<InstanceType<typeof HTMLDivElement>>()
 
 const loading = ref(false)
 
+const loginRef = ref<InstanceType<typeof Login>>()
+
 const systemPrompt = ref('')
 
 const agent = ref(null)
@@ -47,7 +51,7 @@ onMounted(async () => {
   // Query user's chat sessions
   api.aiSessionController.findByUser().then((res) => {
     // Add sessions to list
-    sessionList.value = res.map((row) => {
+    sessionList.value = res.result.map((row) => {
       return { ...row, checked: false }
     })
     // Default select first chat session
@@ -61,6 +65,11 @@ onMounted(async () => {
 
   getSystemPrompt()
   getAgent()
+
+  const route = useRoute()
+  if (route.query.redirect === 'login') {
+    loginRef.value.show()
+  }
 })
 
 // ChatGPT response
@@ -187,6 +196,8 @@ const fileList = ref<UploadUserFile[]>([])
       <div class="session-panel">
         <div class="title">MOSS Call</div>
 
+        <p class="text-lg text-red-500">If you can see this text, Tailwind CSS has been successfully integrated.</p>
+
         <div class="button-wrapper">
           <el-button style="margin-right: 20px" :icon="ChatRound" size="small" @click="handleSessionCreate">Create Session</el-button>
         </div>
@@ -257,6 +268,7 @@ const fileList = ref<UploadUserFile[]>([])
         </div>
         <!-- Listen for send event -->
         <message-input @send="handleSendMessage" v-if="activeSession"></message-input>
+        <Login ref="loginRef" />
       </div>
     </div>
   </div>

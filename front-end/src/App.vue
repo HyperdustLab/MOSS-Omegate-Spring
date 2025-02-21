@@ -14,6 +14,32 @@ import enUs from 'element-plus/dist/locale/en.mjs'
 </template>
 
 <style lang="scss">
+.footer {
+  background-color: #333; /* 更改为深色背景 */
+  padding: 20px 0;
+  text-align: center;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footer-link {
+  color: #fff; /* 更改为浅色文字 */
+  text-decoration: none;
+  margin-right: 20px;
+}
+
+.footer-link:hover {
+  text-decoration: underline;
+}
+
+.footer-copyright {
+  color: #aaa; /* 更改为浅色文字 */
+  font-size: 14px;
+}
+
 .dark-message-box {
   background-color: #141414;
   border-color: #4c4d4f;

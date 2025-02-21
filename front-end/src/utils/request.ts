@@ -9,15 +9,19 @@ export const request = axios.create({
 })
 request.interceptors.response.use(
   (res) => {
-    return res.data.result
+    return res.data
   },
   ({ response }) => {
+    if (response.data.code === 10012) {
+      router.push('/?redirect=login')
+      return
+    }
+
     if (response.data.code !== 1) {
+      console.info()
       ElMessage.warning({ message: 'Request failed, please try again later' })
     }
-    if (response.data.code === 10012) {
-      router.push('/login')
-    }
-    return Promise.reject(response.data.result)
+
+    return Promise.reject(response.data)
   }
 )

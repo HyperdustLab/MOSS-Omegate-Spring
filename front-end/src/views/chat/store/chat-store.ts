@@ -18,8 +18,8 @@ export const useChatStore = defineStore('ai-chat', () => {
   const sessionList = ref<AiSession[]>([])
   const handleCreateSession = async (session: AiSessionInput) => {
     const res = await api.aiSessionController.save({ body: session })
-    const sessionRes = await api.aiSessionController.findById({ id: res })
-    sessionList.value.unshift(sessionRes)
+    const { result } = await api.aiSessionController.findById({ id: res.result })
+    sessionList.value.unshift(result)
     activeSession.value = sessionList.value[0]
   }
   // 从会话列表中删除会话
@@ -53,8 +53,9 @@ export const useChatStore = defineStore('ai-chat', () => {
     const index = sessionList.value.findIndex((value) => {
       return value.id === sessionId
     })
-    activeSession.value = await api.aiSessionController.findById({ id: sessionId })
-    sessionList.value[index] = activeSession.value
+    const { result } = await api.aiSessionController.findById({ id: sessionId })
+    activeSession.value = result
+    sessionList.value[index] = result
   }
   return {
     isEdit,
