@@ -50,6 +50,10 @@ const agent = ref(null)
 onMounted(async () => {
   // Query user's chat sessions
   api.aiSessionController.findByUser().then((res) => {
+    if (!res) {
+      return
+    }
+
     // Add sessions to list
     sessionList.value = res.result.map((row) => {
       return { ...row, checked: false }
@@ -66,8 +70,11 @@ onMounted(async () => {
   getSystemPrompt()
   getAgent()
 
-  const route = useRoute()
-  if (route.query.redirect === 'login') {
+  const route = await useRoute()
+
+  console.info('route.query.redirect:', route.query.redirect)
+
+  if (!localStorage.getItem('X-Token')) {
     loginRef.value.show()
   }
 })
@@ -168,21 +175,33 @@ const beforeUpload: UploadProps['beforeUpload'] = () => {
 }
 
 async function getSystemPrompt() {
-  const data = await request({
+  const res = await request({
     url: '/user/getSystemPrompt',
     method: 'GET',
   })
 
-  systemPrompt.value = data
+  if (res.code === 10012) {
+    localStorage.removeItem('X-Token')
+    location.reload()
+    return
+  }
+
+  systemPrompt.value = res
 }
 
 async function getAgent() {
-  const data = await request({
+  const res = await request({
     url: '/user/getAgent',
     method: 'GET',
   })
 
-  agent.value = data
+  if (res.code === 10012) {
+    localStorage.removeItem('X-Token')
+    location.reload()
+    return
+  }
+
+  agent.value = res
 }
 
 const fileList = ref<UploadUserFile[]>([])
@@ -195,8 +214,6 @@ const fileList = ref<UploadUserFile[]>([])
       <!-- Left session list -->
       <div class="session-panel">
         <div class="title">MOSS Call</div>
-
-        <p class="text-lg text-red-500">If you can see this text, Tailwind CSS has been successfully integrated.</p>
 
         <div class="button-wrapper">
           <el-button style="margin-right: 20px" :icon="ChatRound" size="small" @click="handleSessionCreate">Create Session</el-button>

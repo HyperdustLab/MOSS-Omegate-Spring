@@ -25,6 +25,7 @@
     <jimmer.version>0.8.134</jimmer.version>
     <hutool.version>5.8.25</hutool.version>
     <sa-token.version>1.37.0</sa-token.version>
+    <aws-sdk.version>1.12.300</aws-sdk.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
@@ -145,6 +146,54 @@
       <groupId>org.apache.httpcomponents.client5</groupId>
       <artifactId>httpclient5-fluent</artifactId>
       <version>5.4.2</version>
+    </dependency>
+
+
+    <dependency>
+      <artifactId>aws-java-sdk-logs</artifactId>
+      <groupId>com.amazonaws</groupId>
+      <version>${aws-sdk.version}</version>
+    </dependency>
+    <dependency>
+      <artifactId>aws-java-sdk-kinesis</artifactId>
+      <groupId>com.amazonaws</groupId>
+      <version>${aws-sdk.version}</version>
+    </dependency>
+    <dependency>
+      <artifactId>aws-java-sdk-sns</artifactId>
+      <groupId>com.amazonaws</groupId>
+      <version>${aws-sdk.version}</version>
+    </dependency>
+    <dependency>
+      <artifactId>aws-java-sdk-sts</artifactId>
+      <groupId>com.amazonaws</groupId>
+      <version>${aws-sdk.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-s3</artifactId>
+      <version>${aws-sdk.version}</version>
+    </dependency>
+
+
+    <dependency>
+      <artifactId>aws-facade-v1</artifactId>
+      <groupId>com.kdgregory.logging</groupId>
+      <version>3.0.1</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/software.amazon.awssdk/cloudwatchlogs -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>cloudwatchlogs</artifactId>
+      <version>2.20.123</version>
+    </dependency>
+
+    <dependency>
+      <artifactId>logback-aws-appenders</artifactId>
+      <groupId>com.kdgregory.logging</groupId>
+      <version>3.0.1</version>
     </dependency>
 
 

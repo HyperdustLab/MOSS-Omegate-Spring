@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="dialogVisible" title="Login" width="50%" @close="onClose">
+  <el-dialog v-model="dialogVisible" title="Login" width="50%" :close-on-click-modal="false" :close-on-press-escape="false" :show-close="false">
     <!-- component -->
     <div class="relative py-16 bg-black h-200">
       <div class="relative m-auto px-6 text-gray-300 md:px-12 xl:px-40 h-full">
@@ -183,10 +183,11 @@ async function loginToken(token: string) {
   })
 
   localStorage.setItem('token', result.tokenValue)
+
   dialogVisible.value = false
 
-  localStorage.setItem('token', token)
-  location.reload()
+  localStorage.setItem('X-Token', token)
+  location.href = '/'
 }
 
 function isValidEmail(email: string) {

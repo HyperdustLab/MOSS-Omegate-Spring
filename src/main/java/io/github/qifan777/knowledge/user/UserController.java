@@ -3,9 +3,11 @@ package io.github.qifan777.knowledge.user;
 import cn.dev33.satoken.secure.BCrypt;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import cn.dev33.satoken.stp.StpUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
+import io.github.qifan777.knowledge.result.Res;
 import io.github.qifan777.knowledge.user.dto.UserRegisterInput;
 import io.qifan.infrastructure.common.exception.BusinessException;
 import jakarta.annotation.Resource;
@@ -68,11 +70,18 @@ public class UserController {
   }
 
   @GetMapping("/getSystemPrompt")
-  public String getSystemPrompt() {
+  public Res getSystemPrompt() {
 
     String userId = (String) StpUtil.getLoginId();
 
     String token = tokenMap.get(userId);
+
+    if (StrUtil.isBlank(token)) {
+
+      StpUtil.logout();
+      return new Res(10012, null);
+    }
+
     String body =
         HttpRequest.get(api + "/mgn/agent/getSystemPrompt")
             .header("X-Access-Token", token)
@@ -81,15 +90,23 @@ public class UserController {
 
     JSONObject json = new JSONObject(body);
 
-    return json.getStr("result");
+    return new Res(1, json.getStr("result"));
   }
 
   @GetMapping("/getAgent")
-  public JSONObject getAgent() {
+  public Res getAgent() {
 
     String userId = (String) StpUtil.getLoginId();
 
     String token = tokenMap.get(userId);
+
+    if (StrUtil.isBlank(token)) {
+
+      StpUtil.logout();
+
+      return new Res(10012, null);
+    }
+
     String body =
         HttpRequest.get(api + "/sys/getCurrUser").header("X-Access-Token", token).execute().body();
 
@@ -116,9 +133,8 @@ public class UserController {
       agent.set("agentId", _agent.getStr("sid"));
       agent.set("agentName", _agent.getStr("nickName"));
       agent.set("agentAvatar", _agent.getStr("avatar"));
-
     }
 
-    return agent;
+    return new Res(1, agent);
   }
 }

@@ -12,8 +12,12 @@ request.interceptors.response.use(
     return res.data
   },
   ({ response }) => {
+    console.info('response:', response)
+
     if (response.data.code === 10012) {
-      router.push('/?redirect=login')
+      localStorage.removeItem('X-Token')
+
+      router.push('/')
       return
     }
 
