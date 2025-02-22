@@ -13,10 +13,9 @@ spring:
           max-wait: -1ms
           max-idle: 10
           min-idle: 0
-      host: 172.31.17.192
-      port: 7369
+      host: redis
   datasource:
-    url: jdbc:mysql://172.31.17.192:3306/knowledge_base
+    url: jdbc:mysql://mysql:3306/knowledge_base
     username: root
     password: nft_2868
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -24,7 +23,7 @@ spring:
     authentication:
       username: neo4j
       password: 12345678
-    uri: bolt://172.31.17.192:7687
+    uri: bolt://neo4j:7687
   ai:
     # 阿里灵积
     dash-scope:
@@ -73,7 +72,7 @@ code-assistant:
     password: arthas
     username: arthas
 hyperAGI:
-  api: http://172.31.17.192:9999
+  api: http://172.31.20.116:9999
 server:
   port: 9902
 sa-token:

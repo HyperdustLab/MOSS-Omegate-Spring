@@ -189,7 +189,7 @@ async function loginToken(token: string) {
   localStorage.setItem('X-Token', token)
   location.href = '/'
 }
-
+ 
 function isValidEmail(email: string) {
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return emailPattern.test(email)

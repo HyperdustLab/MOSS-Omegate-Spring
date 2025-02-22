@@ -186,7 +186,7 @@ async function getSystemPrompt() {
     return
   }
 
-  systemPrompt.value = res
+  systemPrompt.value = res.result
 }
 
 async function getAgent() {
@@ -201,7 +201,7 @@ async function getAgent() {
     return
   }
 
-  agent.value = res
+  agent.value = res.result
 }
 
 const fileList = ref<UploadUserFile[]>([])
