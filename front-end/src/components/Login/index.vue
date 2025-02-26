@@ -1,68 +1,70 @@
 <template>
-  <el-dialog v-model="dialogVisible" title="Login" width="45%" :close-on-click-modal="false" :close-on-press-escape="false" :show-close="false">
-    <!-- component -->
-    <div class="relative py-11 bg-black h-180">
-      <div class="relative m-auto px-4 text-gray-300 md:px-8 xl:px-28 h-full">
-        <div class="m-auto md:w-8/12 lg:w-6/12 xl:w-10/12 h-full">
-          <div class="rounded-xl shadow-xl h-full">
-            <div class="p-4 sm:p-11 h-full">
-              <div class="space-y-3">
-                <div class="flex justify-center">
-                  <div class="flex flex-col items-center gap-3">
-                    <img src="../../assets/logo.png" loading="lazy" alt="tailus logo" style="width: 45%" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="mt-11 grid space-y-3">
-                <button @click="loginWithGoogle" class="group h-10 px-4 border-2 border-gray-600 rounded-full transition duration-300 hover:border-blue-400 focus:bg-blue-900 active:bg-blue-800">
-                  <div class="relative flex items-center justify-center">
-                    <img :src="googleIcon" class="w-5 mr-2" alt="google logo" />
-                    <span class="block w-max font-semibold tracking-wide text-gray-300 text-sm transition duration-300 group-hover:text-blue-400 sm:text-base">Google</span>
-                  </div>
-                </button>
-                <button @click="handleMetamaskLogin" class="group h-10 px-4 border-2 border-gray-600 rounded-full transition duration-300 hover:border-blue-400 focus:bg-blue-900 active:bg-blue-800">
-                  <div class="relative flex items-center justify-center">
-                    <img :src="metamaskIcon" class="w-5 mr-2" alt="google logo" />
-                    <span class="block w-max font-semibold tracking-wide text-gray-300 text-sm transition duration-300 group-hover:text-blue-400 sm:text-base">MetaMask</span>
-                  </div>
-                </button>
-              </div>
-
-              <div class="flex items-center mb-2">
-                <hr class="h-0 border-b border-solid border-grey-500 grow" />
-                <p class="mx-3 text-grey-600 text-base">or</p>
-                <hr class="h-0 border-b border-solid border-grey-500 grow" />
-              </div>
-
-              <div class="mt-11 grid space-y-3">
-                <el-form ref="ruleFormRef" :model="form" :rules="rules" label-position="top">
-                  <el-form-item label="Email" prop="email">
-                    <el-input v-model="form.email" :disabled="false" size="large" />
-                  </el-form-item>
-                  <el-form-item label="Verification Code" prop="code">
-                    <el-input v-model="form.code" size="large">
-                      <template #append>
-                        <el-button :disabled="sendCodeDisabled" :loading="loading" @click="sendCode">{{ sendCodeTxt }}</el-button>
-                      </template>
-                    </el-input>
-                  </el-form-item>
-                </el-form>
-
-                <div>
+  <el-dialog v-model="dialogVisible" fullscreen title="Login" width="45%" :close-on-click-modal="false" :close-on-press-escape="false" :show-close="false" :modal="true" :modal-append-to-body="true" modal-class="modal-mask" :lock-scroll="true" :append-to-body="true">
+    <div>
+      <!-- component -->
+      <div class="w-70% relative py-11 bg-black h-180 flex items-center justify-center" style="margin-left: 15%">
+        <div class="relative m-auto px-4 text-gray-300 md:px-8 xl:px-28 h-full">
+          <div class="m-auto md:w-8/12 lg:w-6/12 xl:w-10/12 h-full">
+            <div class="rounded-xl shadow-xl h-full">
+              <div class="p-4 sm:p-11 h-full">
+                <div class="space-y-3">
                   <div class="flex justify-center">
-                    <el-button type="primary" @click="emailLogin" class="group h-10 w-50/100 px-8 border-2 border-gray-600 rounded-full transition duration-300 hover:border-blue-400 focus:bg-blue-900 active:bg-blue-800" style="background-color: #00ff01; border-color: #00ff01">
-                      <div class="relative flex items-center space-x-3 justify-center">
-                        <span class="block w-max font-semibold tracking-wide text-black text-sm transition duration-300 group-hover:text-blue-400 sm:text-base">Login with Email</span>
-                      </div>
-                    </el-button>
+                    <div class="flex flex-col items-center gap-3">
+                      <img src="../../assets/logo.png" loading="lazy" alt="tailus logo" style="width: 45%" />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div class="mt-22 space-y-3 text-gray-400 text-center sm:-mb-6">
-                <p class="text-xs">By proceeding, you agree to our <a href="/termsService" class="underline" target="_blank">Terms of Use</a> and confirm you have read our <a href="/privacyPolicy" class="underline" target="_blank">Privacy and Cookie Statement</a>.</p>
-                <p class="text-xs">This site is protected by reCAPTCHA and the <a href="https://policies.google.com/privacy" class="underline" target="_blank">Google Privacy Policy</a> and <a href="https://policies.google.com/terms" class="underline" target="_blank">Terms of Service</a> apply.</p>
+                <div class="mt-11 grid space-y-3">
+                  <button @click="loginWithGoogle" class="group h-10 px-4 border-2 border-gray-600 rounded-full transition duration-300 hover:border-blue-400 focus:bg-blue-900 active:bg-blue-800">
+                    <div class="relative flex items-center justify-center">
+                      <img :src="googleIcon" class="w-5 mr-2" alt="google logo" />
+                      <span class="block w-max font-semibold tracking-wide text-gray-300 text-sm transition duration-300 group-hover:text-blue-400 sm:text-base">Google</span>
+                    </div>
+                  </button>
+                  <button @click="handleMetamaskLogin" class="group h-10 px-4 border-2 border-gray-600 rounded-full transition duration-300 hover:border-blue-400 focus:bg-blue-900 active:bg-blue-800">
+                    <div class="relative flex items-center justify-center">
+                      <img :src="metamaskIcon" class="w-5 mr-2" alt="google logo" />
+                      <span class="block w-max font-semibold tracking-wide text-gray-300 text-sm transition duration-300 group-hover:text-blue-400 sm:text-base">MetaMask</span>
+                    </div>
+                  </button>
+                </div>
+
+                <div class="flex items-center mb-2">
+                  <hr class="h-0 border-b border-solid border-grey-500 grow" />
+                  <p class="mx-3 text-grey-600 text-base">or</p>
+                  <hr class="h-0 border-b border-solid border-grey-500 grow" />
+                </div>
+
+                <div class="mt-11 grid space-y-3">
+                  <el-form ref="ruleFormRef" :model="form" :rules="rules" label-position="top">
+                    <el-form-item label="Email" prop="email">
+                      <el-input v-model="form.email" :disabled="false" size="large" />
+                    </el-form-item>
+                    <el-form-item label="Verification Code" prop="code">
+                      <el-input v-model="form.code" size="large">
+                        <template #append>
+                          <el-button :disabled="sendCodeDisabled" :loading="loading" @click="sendCode">{{ sendCodeTxt }}</el-button>
+                        </template>
+                      </el-input>
+                    </el-form-item>
+                  </el-form>
+
+                  <div>
+                    <div class="flex justify-center">
+                      <el-button type="primary" @click="emailLogin" class="group h-10 w-50/100 px-8 border-2 border-gray-600 rounded-full transition duration-300 hover:border-blue-400 focus:bg-blue-900 active:bg-blue-800" style="background-color: #00ff01; border-color: #00ff01">
+                        <div class="relative flex items-center space-x-3 justify-center">
+                          <span class="block w-max font-semibold tracking-wide text-black text-sm transition duration-300 group-hover:text-blue-400 sm:text-base">Login with Email</span>
+                        </div>
+                      </el-button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-22 space-y-3 text-gray-400 text-center sm:-mb-6">
+                  <p class="text-xs">By proceeding, you agree to our <a href="/termsService" class="underline" target="_blank">Terms of Use</a> and confirm you have read our <a href="/privacyPolicy" class="underline" target="_blank">Privacy and Cookie Statement</a>.</p>
+                  <p class="text-xs">This site is protected by reCAPTCHA and the <a href="https://policies.google.com/privacy" class="underline" target="_blank">Google Privacy Policy</a> and <a href="https://policies.google.com/terms" class="underline" target="_blank">Terms of Service</a> apply.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -301,5 +303,14 @@ function handleMessage(event: any) {
 .social-media-icon span {
   margin-top: 8px;
   font-size: 12px;
+}
+
+:deep(.el-overlay) {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.modal-mask {
+  background-color: rgba(0, 0, 0, 0.95) !important;
+  backdrop-filter: blur(8px);
 }
 </style>

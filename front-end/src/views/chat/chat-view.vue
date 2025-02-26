@@ -12,6 +12,8 @@ import { type AiMessage, useChatStore } from './store/chat-store'
 import type { AiMessageParams, AiMessageWrapper } from '@/apis/__generated/model/static'
 import Login from '@/components/Login/index.vue'
 
+import UploadEmbedding from './components/uploadEmbedding.vue'
+
 import user from '@/assets/user.png'
 
 import { request } from '@/utils/request'
@@ -222,6 +224,12 @@ async function getLoginUser() {
       'X-Access-Token': token.value,
     },
     method: 'GET',
+  }).catch((error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('X-Token')
+      location.reload()
+    }
+    throw error
   })
 
   loginUser.value = res.result
@@ -233,7 +241,11 @@ const disconnect = () => {
 }
 
 const goHome = () => {
-  location.href = 'https://app.hyperagi.network/dAppHub'
+  location.href = `https://mossai.com/`
+}
+
+function goUser() {
+  location.href = `https://user.hyperagi.network/login?token=${token.value}`
 }
 
 const fileList = ref<UploadUserFile[]>([])
@@ -245,7 +257,7 @@ const fileList = ref<UploadUserFile[]>([])
     <div class="chat-panel" v-loading="loading">
       <!-- Left session list -->
       <div class="session-panel">
-        <div class="flex flex-col items-center gap-4">
+        <div class="flex flex-col items-center gap-4" @click="goHome">
           <img src="../../assets/logo1.gif" loading="lazy" class="w-20" alt="logo" style="margin-right: 80%" />
         </div>
 
@@ -350,7 +362,7 @@ const fileList = ref<UploadUserFile[]>([])
                   <User />
                 </el-icon>
 
-                <el-button type="plain" @click="goHome" style="color: white" class="text-xs text-white" link>Home</el-button>
+                <el-button type="plain" @click="goUser" style="color: white" class="text-xs text-white" link>Dashboard</el-button>
               </p>
 
               <p class="ml-1.25 flex items-center mt-7.5">
