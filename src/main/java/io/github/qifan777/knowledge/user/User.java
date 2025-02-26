@@ -8,34 +8,40 @@ import org.babyfish.jimmer.sql.GeneratedValue;
 import org.babyfish.jimmer.sql.Id;
 import org.babyfish.jimmer.sql.Key;
 
+
 @Entity
 public interface User extends BaseDateTime {
-  @Id
-  @GeneratedValue(generatorType = UUIDIdGenerator.class)
-  String id();
+    @Id
+    @GeneratedValue(generatorType = UUIDIdGenerator.class)
+    String id();
 
-  /** 手机号 */
-  @Key
-  String phone();
+    /**
+     * 手机号
+     */
+    @Key
+    String phone();
 
-  /** 密码 */
-  String password();
+    /**
+     * 密码
+     */
+    String password();
 
-  /** 头像 */
-  @Null
-  String avatar();
+    /**
+     * 头像
+     */
+    @Null
+    String avatar();
 
-  /** 昵称 */
-  @Null
-  String nickname();
+    /**
+     * 昵称
+     */
+    @Null
+    String nickname();
 
-  /** 性别 */
-  @Null
-  String gender();
-
-  @Null
-  String token();
-
-  @Null
-  String userId();
+    /**
+     * 性别
+     */
+    @Null
+    String gender();
 }
+

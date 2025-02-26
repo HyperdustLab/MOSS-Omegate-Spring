@@ -31,7 +31,7 @@ spring:
       api-key: sk-956c69dfd7f3489bbd7eeec37db4f4d7
       chat:
         options:
-          model: qwen-max
+          model: deepseek-r1-distill-llama-8b
           # 多模态图片理解需要开启
       #          multi-model: true
       embedding:

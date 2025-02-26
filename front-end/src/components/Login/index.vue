@@ -12,7 +12,6 @@
                     <img src="../../assets/logo.png" loading="lazy" alt="tailus logo" style="width: 45%" />
                   </div>
                 </div>
-                <h2 class="mb-1 text-2xl font-bold text-center">Decentralized AGI: Emerging from Agents</h2>
               </div>
 
               <div class="mt-11 grid space-y-3">

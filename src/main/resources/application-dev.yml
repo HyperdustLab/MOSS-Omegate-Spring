@@ -15,6 +15,7 @@ spring:
           max-idle: 10
           min-idle: 0
       host: 127.0.0.1
+      port: 7369
   datasource:
     url: jdbc:mysql://127.0.0.1:3306/knowledge_base
     username: root
@@ -28,7 +29,7 @@ spring:
       api-key: sk-956c69dfd7f3489bbd7eeec37db4f4d7
       chat:
         options:
-          model: qwen-max
+          model: deepseek-r1-distill-llama-8b
           # 多模态图片理解需要开启
       #          multi-model: true
       embedding:
@@ -53,9 +54,9 @@ spring:
       api-key: xxx
     ollama:
       # 填写模型所在的地址
-      base-url: http://52.66.82.216:11434
+      base-url: http://43.163.116.156:11434
       chat:
-        model: deepseek-r1:8b
+        model: deepseek-r1:14b
       embedding:
         options:
           model: deepseek-r1:8b

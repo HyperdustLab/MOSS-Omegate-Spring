@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.qifan777.knowledge.ai.agent.Agent;
 import io.github.qifan777.knowledge.ai.message.dto.AiMessageInput;
 import io.github.qifan777.knowledge.ai.message.dto.AiMessageWrapper;
-import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
@@ -20,7 +19,6 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.PromptTemplate;
-import org.springframework.ai.document.Document;
 import org.springframework.ai.model.Media;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -108,44 +106,30 @@ public class AiMessageController {
     }
     String finalUserId = userId;
 
-    // 启用文件问答
-    // agent列表`
-    // 使用历史消息
-    // 使用向量数据库
-    // 和前端监听的事件相对应
-
-    String promptWithContext =
-        "Message[role=SYSTEM, content=The following content is additional knowledge. You can refer to it when answering questions.\\n ---------------------\\n additional knowledge：{}\\n ---------------------\\n Perception System:{}\\n ---------------------\\n , History content：{}images=null, toolCalls=null]\\n Message[role=USER, content={}\\n ---------------------\\n , images=null, toolCalls=null]\"}";
-
-    FilterExpressionBuilder b = new FilterExpressionBuilder();
-
-    Expression exp = b.eq("userId", userId).build();
-
-    log.info("filterExpression: {}", exp);
-
-    SearchRequest searchRequest = SearchRequest.defaults().withFilterExpression(exp);
-
-    List<Document> documentList = vectorStore.similaritySearch(searchRequest);
-
-    List<String> contentList = documentList.stream().map(Document::getContent).toList();
-
-    String additionalKnowledge = String.join("\n", contentList);
-
-    List<Message> messageList = chatMemory.get(aiMessageWrapper.getMessage().getSessionId(), 10);
-
-    String historyContent = StrUtil.join("\n", messageList);
-
-    promptWithContext =
-        StrUtil.format(
-            promptWithContext,
-            additionalKnowledge,
-            content,
-            historyContent,
-            aiMessageWrapper.getMessage().getTextContent());
-
-    log.info("promptWithContext: {}", promptWithContext);
-
-    return ChatClient.create(chatModel).prompt(promptWithContext).stream()
+    // 如果启用Agent则获取Agent的bean
+    if (aiMessageWrapper.getParams().getEnableAgent()) {
+      // 获取带有Agent注解的bean
+      Map<String, Object> beansWithAnnotation =
+          applicationContext.getBeansWithAnnotation(Agent.class);
+      functionBeanNames = new String[beansWithAnnotation.size()];
+      functionBeanNames = beansWithAnnotation.keySet().toArray(functionBeanNames);
+    }
+    return ChatClient.create(chatModel)
+        .prompt()
+        // 启用文件问答
+        .system(promptSystemSpec -> useFile(promptSystemSpec, content))
+        .user(promptUserSpec -> toPrompt(promptUserSpec, aiMessageWrapper.getMessage()))
+        // agent列表
+        .functions(functionBeanNames)
+        .advisors(
+            advisorSpec -> {
+              // 使用历史消息
+              useChatHistory(advisorSpec, aiMessageWrapper.getMessage().getSessionId());
+              // 使用向量数据库
+              useVectorStore(
+                  advisorSpec, aiMessageWrapper.getParams().getEnableVectorStore(), finalUserId);
+            })
+        .stream()
         .chatResponse()
         .map(
             chatResponse ->
@@ -154,53 +138,6 @@ public class AiMessageController {
                     .event("message")
                     .build());
   }
-
-  //  /**
-  //   * 不通过流的形式完成推理
-  //   *
-  //   * @param input 消息内容（文本，图片，等）
-  //   * @param content 文件内容（如果需要的话）
-  //   * @return ChatResponse 推理结果
-  //   */
-  //  @SneakyThrows
-  //  @PostMapping(value = "chat-sync", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-  //  public ChatResponse chatSync(
-  //      @RequestParam String input, @RequestParam(required = false) String content) {
-  //
-  //    // 将传入的 input JSON 字符串解析为 AiMessageWrapper 对象
-  //    AiMessageWrapper aiMessageWrapper = JSONUtil.toBean(input, AiMessageWrapper.class);
-  //    // 获取 functionBeanNames（Agent 支持功能）
-  //    String[] functionBeanNames = new String[0];
-  //    if (aiMessageWrapper.getParams().getEnableAgent()) {
-  //      Map<String, Object> beansWithAnnotation =
-  //          applicationContext.getBeansWithAnnotation(Agent.class);
-  //      functionBeanNames = new String[beansWithAnnotation.size()];
-  //      functionBeanNames = beansWithAnnotation.keySet().toArray(functionBeanNames);
-  //    }
-  //
-  //    // 使用 ChatClient 创建一个同步推理请求
-  //    ChatResponse chatResponse =
-  //        ChatClient.create(chatModel)
-  //            .prompt()
-  //            .system(promptSystemSpec -> useFile(promptSystemSpec, content)) // 启用文件问答
-  //            .user(promptUserSpec -> toPrompt(promptUserSpec, aiMessageWrapper.getMessage()))
-  //            //
-  //            .functions(functionBeanNames)
-  //            .advisors(
-  //                advisorSpec -> {
-  //                  useChatHistory(
-  //                      advisorSpec, aiMessageWrapper.getMessage().getSessionId()); // 使用历史消息
-  //                  useVectorStore(
-  //                      advisorSpec,
-  //                      aiMessageWrapper.getParams().getEnableVectorStore(),
-  //                      aiMessageWrapper.getParams().getUserId()); // 使用向量数据库
-  //                })
-  //            .call()
-  //            .chatResponse();
-  //
-  //    // 返回最终的推理结果
-  //    return chatResponse;
-  //  }
 
   @SneakyThrows
   public String toJson(ChatResponse response) {
@@ -217,23 +154,22 @@ public class AiMessageController {
       promptUserSpec.media(userMessage.getMedia().toArray(medias));
     }
     // 用户发送的文本
-    promptUserSpec.text("");
+    promptUserSpec.text(message.getText());
   }
 
   public void useChatHistory(ChatClient.AdvisorSpec advisorSpec, String sessionId) {
     // 1. 如果需要存储会话和消息到数据库，自己可以实现ChatMemory接口，这里使用自己实现的AiMessageChatMemory，数据库存储。
     // 2. 传入会话id，MessageChatMemoryAdvisor会根据会话id去查找消息。
-    // 3. 只需要携带最近10条消息2
+    // 3. 只需要携带最近10条消息
     // MessageChatMemoryAdvisor会在消息发送给大模型之前，从ChatMemory中获取会话的历史消息，然后一起发送给大模型。
     advisorSpec.advisors(new MessageChatMemoryAdvisor(chatMemory, sessionId, 10));
   }
 
   public void useVectorStore(
-      ChatClient.AdvisorSpec advisorSpec,
-      Boolean enableVectorStore,
-      String userId,
-      String inputText) {
+      ChatClient.AdvisorSpec advisorSpec, Boolean enableVectorStore, String userId) {
     if (!enableVectorStore) return;
+    // question_answer_context is a placeholder that will be replaced with the document retrieved
+    // from the vector database. QuestionAnswerAdvisor will replace it.
 
     FilterExpressionBuilder b = new FilterExpressionBuilder();
 
@@ -241,54 +177,32 @@ public class AiMessageController {
 
     log.info("filterExpression: {}", exp);
 
-    SearchRequest searchRequest = SearchRequest.defaults().withFilterExpression(exp);
+    SearchRequest searchRequest = SearchRequest.builder().filterExpression(exp).build();
 
-    List<Document> documentList = vectorStore.similaritySearch(searchRequest);
-
-    String promptWithContext = "";
-
-    if (documentList.isEmpty()) {
-
-      // question_answer_context是一个占位符，会替换成向量数据库中查询到的文档。QuestionAnswerAdvisor会替换。
-      promptWithContext =
-          """
-                  {question_answer_context}
-                  {inputText}
-                  """;
-    } else {
-      // question_answer_context是一个占位符，会替换成向量数据库中查询到的文档。QuestionAnswerAdvisor会替换。
-      promptWithContext =
-          """
-                  {question_answer_context}
-                  ---------------------
-                  {inputText}
-                  """;
-    }
-
-    promptWithContext = promptWithContext.replaceAll("\\{inputText}", inputText);
-
-    log.info("promptWithContext: {}", promptWithContext);
-
+    String promptWithContext =
+        """
+                Below is the contextual information
+                ---------------------
+                {question_answer_context}
+                ---------------------
+                Based on the given context and provided historical information (rather than prior knowledge), respond with advice. If the answer is not in the context, inform the user that you cannot answer this question.
+                """;
     advisorSpec.advisors(new QuestionAnswerAdvisor(vectorStore, searchRequest, promptWithContext));
-
-    System.out.print("");
   }
 
   @SneakyThrows
   public void useFile(ChatClient.PromptSystemSpec spec, String content) {
+    if (StrUtil.isBlank(content)) return;
 
-    if (StrUtil.isBlank(content)) {
-      return;
-    }
     Message message =
         new PromptTemplate(
                 """
-                The following content is additional knowledge. You can refer to it when answering questions.
-                ---------------------
-                {context}
-                ---------------------
-                """)
+            The following content is additional knowledge that can be referenced when answering questions
+            ---------------------
+            {context}
+            ---------------------
+            """)
             .createMessage(Map.of("context", content));
-    spec.text(message.getContent());
+    spec.text(message.getText());
   }
 }

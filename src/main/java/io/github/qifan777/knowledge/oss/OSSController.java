@@ -14,8 +14,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class OSSController {
     private final OSSService ossService;
 
-
-
     @PostMapping("upload")
     public String upload(@RequestParam MultipartFile file) {
         return ossService.upload(file);

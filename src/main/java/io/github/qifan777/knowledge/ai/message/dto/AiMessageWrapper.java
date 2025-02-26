@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class AiMessageWrapper {
-  AiMessageInput message;
-  AiMessageParams params;
+    AiMessageInput message;
+    AiMessageParams params;
 }

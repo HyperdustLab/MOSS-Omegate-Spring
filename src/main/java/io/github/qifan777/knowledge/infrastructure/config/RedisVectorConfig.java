@@ -1,12 +1,11 @@
 package io.github.qifan777.knowledge.infrastructure.config;
 
 import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.autoconfigure.vectorstore.redis.RedisVectorStoreAutoConfiguration;
 import org.springframework.ai.autoconfigure.vectorstore.redis.RedisVectorStoreProperties;
 import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.ai.vectorstore.RedisVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.redis.RedisVectorStore;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.data.redis.RedisConnectionDetails;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -20,7 +19,6 @@ import redis.clients.jedis.JedisPooled;
 // 读取RedisStack的配置信息
 @EnableConfigurationProperties({RedisVectorStoreProperties.class})
 @AllArgsConstructor
-@Slf4j
 public class RedisVectorConfig {
 
   /**
@@ -35,27 +33,18 @@ public class RedisVectorConfig {
       EmbeddingModel embeddingModel,
       RedisVectorStoreProperties properties,
       RedisConnectionDetails redisConnectionDetails) {
-    RedisVectorStore.RedisVectorStoreConfig config =
-        RedisVectorStore.RedisVectorStoreConfig.builder()
-            .withMetadataFields(RedisVectorStore.MetadataField.text("userId"))
-            .withIndexName(properties.getIndex())
-            .withPrefix(properties.getPrefix())
-            .build();
-
-    log.info(
-        "redisConnectionDetails getStandalone: {}",
-        redisConnectionDetails.getStandalone().getHost()
-            + ":"
-            + redisConnectionDetails.getStandalone().getPort());
-
-    return new RedisVectorStore(
-        config,
-        embeddingModel,
+    JedisPooled jedisPooled =
         new JedisPooled(
             redisConnectionDetails.getStandalone().getHost(),
             redisConnectionDetails.getStandalone().getPort(),
             redisConnectionDetails.getUsername(),
-            redisConnectionDetails.getPassword()),
-        properties.isInitializeSchema());
+            redisConnectionDetails.getPassword());
+    return RedisVectorStore.builder(jedisPooled, embeddingModel)
+        .indexName(properties.getIndex())
+        .metadataFields()
+        .prefix(properties.getPrefix())
+        .metadataFields(RedisVectorStore.MetadataField.text("userId"))
+        .initializeSchema(properties.isInitializeSchema())
+        .build();
   }
 }

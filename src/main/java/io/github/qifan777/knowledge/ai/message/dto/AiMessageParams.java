@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class AiMessageParams {
-  Boolean enableVectorStore;
+  Boolean enableVectorStore = true;
   Boolean enableAgent;
   String userId;
 }

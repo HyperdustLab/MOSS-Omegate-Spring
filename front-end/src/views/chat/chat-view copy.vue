@@ -390,6 +390,21 @@ const fileList = ref<UploadUserFile[]>([])
     0 0 0 0 var(--el-input-border-color) inset;
 }
 
+:deep .el-input__wrapper {
+  display: inline-flex;
+  flex-grow: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 11px;
+  background-color: var(--el-input-bg-color, var(--el-fill-color-blank));
+  background-image: none;
+  border-radius: var(--el-input-border-radius, var(--el-border-radius-base));
+  cursor: text;
+  transition: var(--el-transition-box-shadow);
+  transform: translate3d(0, 0, 0);
+  //  box-shadow: 0 0 0 0px var(--el-input-border-color, var(--el-border-color)) inset;
+}
+
 :deep .el-menu--horizontal {
   display: flex;
   flex-wrap: nowrap;

@@ -29,6 +29,7 @@
     "uni-ai-admin": "file:",
     "unocss": "0.53.5",
     "vue": "^3.4.21",
+    "vue-clipboard3": "^2.0.0",
     "vue-router": "^4.2.5",
     "vxe-table": "^4.11.10"
   },
