@@ -213,9 +213,11 @@ const fileList = ref<UploadUserFile[]>([])
     <div class="chat-panel" v-loading="loading">
       <!-- Left session list -->
       <div class="session-panel">
-        <div class="title">MOSS Call</div>
+        <div class="flex flex-col items-center gap-4">
+          <img src="../../assets/logo1.gif" loading="lazy" class="w-20" alt="logo" style="margin-right: 80%" />
+        </div>
 
-        <div class="button-wrapper">
+        <div class="button-wrapper mt-10">
           <el-button style="margin-right: 20px" :icon="ChatRound" size="small" @click="handleSessionCreate">Create Session</el-button>
         </div>
 
@@ -228,13 +230,13 @@ const fileList = ref<UploadUserFile[]>([])
           <el-form size="small" v-if="agent && agent.agentId">
             <el-form-item label="RAG Knowledge">
               <el-upload v-loading="embeddingLoading" multiple name="files" :action="`${API_PREFIX}/document/embedding`" :show-file-list="false" :on-success="onUploadSuccess" :before-upload="beforeUpload">
-                <el-button type="primary">
+                <el-button class="ml-50" type="primary">
                   <p style="color: white">Upload</p>
                 </el-button>
               </el-upload>
             </el-form-item>
             <el-form-item label="Enable Knowledge Base">
-              <el-switch v-model="options.enableVectorStore"></el-switch>
+              <el-switch class="ml-43" v-model="options.enableVectorStore" style="--el-switch-on-color: #13ce66"></el-switch>
             </el-form-item>
             <!-- <el-form-item label="agent">
               <el-switch v-model="options.enableAgent"></el-switch>
@@ -265,10 +267,10 @@ const fileList = ref<UploadUserFile[]>([])
           </div>
           <!-- Edit buttons at end -->
           <div class="rear">
-            <el-icon :size="20" style="margin-right: 10px">
+            <el-icon :size="20" style="margin-right: 10px; color: white">
               <Delete @click="handleClearMessage(activeSession.id)" />
             </el-icon>
-            <el-icon :size="20">
+            <el-icon :size="20" style="color: white">
               <!-- Show edit button when not in edit mode -->
               <EditPen v-if="!isEdit" @click="isEdit = true" />
               <!-- Show cancel edit button when in edit mode -->
@@ -424,7 +426,7 @@ const fileList = ref<UploadUserFile[]>([])
 
     // Options panel
     .option-panel {
-      width: 200px;
+      width: 100%;
       padding: 20px;
       border-left: 1px solid rgba(black, 0.07);
 

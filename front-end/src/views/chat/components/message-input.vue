@@ -30,7 +30,8 @@ const sendMessage = () => {
       <!-- Press enter to send, input box height is 3 lines -->
       <el-input v-model="message.text" :autosize="false" :rows="3" class="input" resize="none" type="textarea" @keydown.enter.prevent="sendMessage"> </el-input>
       <div class="button-wrapper">
-        <image-upload class="image" :size="40" v-model="message.image"></image-upload>
+        <image-upload class="image" :size="40" v-model="message.image" @click.prevent disabled></image-upload>
+
         <el-button type="primary" @click="sendMessage">
           <el-icon class="el-icon--left">
             <Position />

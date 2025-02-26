@@ -11,18 +11,9 @@ import 'md-editor-v3/lib/preview.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import 'virtual:uno.css'
 import 'normalize.css'
-import 'vxe-table/lib/style.css'
-import 'vxe-table-plugin-element/dist/style.css'
 import './assets/main.css'
 
-import VXETable from 'vxe-table'
-import VXETablePluginElement from 'vxe-table-plugin-element'
-
 const app = createApp(App)
-
-// 注册 vxe-table 和它的 Element Plus 插件
-VXETable.use(VXETablePluginElement)
-app.use(VXETable)
 
 app.use(createPinia())
 app.use(ElementPlus)
