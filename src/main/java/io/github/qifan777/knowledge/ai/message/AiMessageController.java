@@ -185,7 +185,6 @@ public class AiMessageController {
                 ---------------------
                 {question_answer_context}
                 ---------------------
-                Based on the given context and provided historical information (rather than prior knowledge), respond with advice. If the answer is not in the context, inform the user that you cannot answer this question.
                 """;
     advisorSpec.advisors(new QuestionAnswerAdvisor(vectorStore, searchRequest, promptWithContext));
   }

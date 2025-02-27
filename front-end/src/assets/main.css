@@ -154,6 +154,24 @@ html.dark {
     -1px 0 0 0 var(--el-input-border-color) inset;
 }
 
+.el-dialog__title {
+  color: white;
+  font-size: var(--el-dialog-title-font-size);
+  line-height: var(--el-dialog-font-line-height);
+}
+
+.el-upload-list__item-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: white;
+}
+
+.el-upload-list__item-name .el-icon {
+  color: white;
+  margin-right: 6px;
+}
+
 .el-input-group__append,
 .el-input-group__prepend {
   background-color: #1e1e1e;

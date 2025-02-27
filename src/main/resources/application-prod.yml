@@ -55,12 +55,12 @@ spring:
       api-key: xxx
     ollama:
       # 填写模型所在的地址
-      base-url: http://52.66.82.216:11434
+      base-url: http://43.163.116.156:11434
       chat:
-        model: deepseek-r1:8b
+        model: deepseek-r1:32b
       embedding:
         options:
-          model: deepseek-r1:8b
+          model: mxbai-embed-large
     vectorstore:
       redis:
         initialize-schema: true

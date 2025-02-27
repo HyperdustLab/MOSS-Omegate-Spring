@@ -41,6 +41,10 @@ const { handleDeleteSession, handleUpdateSession, handleClearMessage } = chatSto
 const { activeSession, sessionList, isEdit } = storeToRefs(chatStore)
 const messageListRef = ref<InstanceType<typeof HTMLDivElement>>()
 
+import logoutPng from '@/assets/image/logout.png?url'
+
+import Substring from '@/components/Substring.vue'
+
 const loading = ref(false)
 
 const loginRef = ref<InstanceType<typeof Login>>()
@@ -53,9 +57,7 @@ const agent = ref(null)
 
 const token = ref(localStorage.getItem('X-Token'))
 
-import logoutPng from '@/assets/image/logout.png?url'
-
-import Substring from '@/components/Substring.vue'
+const uploadEmbeddingRef = ref<InstanceType<typeof UploadEmbedding>>()
 
 onMounted(async () => {
   // Query user's chat sessions
@@ -248,6 +250,10 @@ function goUser() {
   location.href = `https://user.hyperagi.network/login?token=${token.value}`
 }
 
+function showUploadEmbedding() {
+  uploadEmbeddingRef.value?.show()
+}
+
 const fileList = ref<UploadUserFile[]>([])
 </script>
 <template>
@@ -275,11 +281,15 @@ const fileList = ref<UploadUserFile[]>([])
         <div class="option-panel">
           <el-form size="small" v-if="agent && agent.agentId">
             <el-form-item label="RAG Knowledge">
-              <el-upload v-loading="embeddingLoading" multiple name="files" :action="`${API_PREFIX}/document/embedding`" :show-file-list="false" :on-success="onUploadSuccess" :before-upload="beforeUpload">
+              <!-- <el-upload v-loading="embeddingLoading" multiple name="files" :action="`${API_PREFIX}/document/embedding`" :show-file-list="false" :on-success="onUploadSuccess" :before-upload="beforeUpload">
                 <el-button class="ml-50" type="primary">
                   <p style="color: white">Upload</p>
                 </el-button>
-              </el-upload>
+              </el-upload> -->
+
+              <el-button class="ml-50" @click="showUploadEmbedding" type="primary">
+                <p style="color: white">Upload</p>
+              </el-button>
             </el-form-item>
             <el-form-item label="Enable Knowledge Base">
               <el-switch class="ml-43" v-model="options.enableVectorStore" style="--el-switch-on-color: #13ce66"></el-switch>
@@ -374,6 +384,8 @@ const fileList = ref<UploadUserFile[]>([])
           </template>
         </el-dropdown>
         <Login ref="loginRef" />
+
+        <UploadEmbedding ref="uploadEmbeddingRef"></UploadEmbedding>
       </div>
     </div>
   </div>

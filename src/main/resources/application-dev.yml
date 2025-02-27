@@ -29,12 +29,12 @@ spring:
       api-key: sk-956c69dfd7f3489bbd7eeec37db4f4d7
       chat:
         options:
-          model: deepseek-r1-distill-llama-8b
+          model: deepseek-r1-distill-qwen-32b
           # 多模态图片理解需要开启
       #          multi-model: true
       embedding:
         options:
-          model: text-embedding-v2
+          model: deepseek-r1-distill-llama-8b
       image:
         options:
           model: wanx-v1
@@ -56,10 +56,10 @@ spring:
       # 填写模型所在的地址
       base-url: http://43.163.116.156:11434
       chat:
-        model: deepseek-r1:14b
+        model: deepseek-r1:32b
       embedding:
         options:
-          model: deepseek-r1:8b
+          model: mxbai-embed-large
     vectorstore:
       redis:
         initialize-schema: true
