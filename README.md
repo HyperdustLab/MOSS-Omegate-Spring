@@ -1,5 +1,4 @@
-# 
-
+# Omegate v0.1
 
 ## Runtime
 
@@ -23,7 +22,7 @@
 
 ## How to run it
 
-### 1.clone代码
+### 1.clone project
 
 ```shell
 git clone 
