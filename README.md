@@ -37,7 +37,7 @@ modify application.yml中的API-KEY, MySQL, Redis-Stack, Neo4j config
 launch backend
 
 1. run ServerApplication.java
-2. target/generated-sources/annotations右键mark directory as/generated source root
+2. target/generated-sources/annotations mark directory as/generated source root
 
 run the front end，under /front-end/
 
