@@ -34,3 +34,9 @@ coverage
 
 /src/apis/__generated/
 /scripts/ingredient-admin.tar
+
+
+.env
+.env.test
+.env.production
+.env.development
