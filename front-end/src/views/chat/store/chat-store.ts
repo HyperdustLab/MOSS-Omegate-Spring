@@ -5,10 +5,7 @@ import { api } from '@/utils/api-instance'
 import type { AiMessageInput, AiSessionInput } from '@/apis/__generated/model/static'
 import { ElMessageBox } from 'element-plus'
 
-export type AiSession = Pick<
-  AiSessionDto['AiSessionRepository/FETCHER'],
-  'id' | 'name' | 'editedTime'
-> & {
+export type AiSession = Pick<AiSessionDto['AiSessionRepository/FETCHER'], 'id' | 'name' | 'editedTime'> & {
   messages: AiMessage[]
 }
 
@@ -21,8 +18,8 @@ export const useChatStore = defineStore('ai-chat', () => {
   const sessionList = ref<AiSession[]>([])
   const handleCreateSession = async (session: AiSessionInput) => {
     const res = await api.aiSessionController.save({ body: session })
-    const sessionRes = await api.aiSessionController.findById({ id: res })
-    sessionList.value.unshift(sessionRes)
+    const { result } = await api.aiSessionController.findById({ id: res.result })
+    sessionList.value.unshift(result)
     activeSession.value = sessionList.value[0]
   }
   // 从会话列表中删除会话
@@ -44,18 +41,21 @@ export const useChatStore = defineStore('ai-chat', () => {
       return
     }
     await api.aiSessionController.save({
-      body: { ...activeSession.value }
+      body: { ...activeSession.value },
     })
     isEdit.value = false
   }
   const handleClearMessage = async (sessionId: string) => {
-    await ElMessageBox.confirm('是否清空会话记录？', '提示')
+    await ElMessageBox.confirm('Clear chat history?', 'Confirm', {
+      customClass: 'dark-message-box',
+    })
     await api.aiMessageController.deleteHistory({ sessionId })
     const index = sessionList.value.findIndex((value) => {
       return value.id === sessionId
     })
-    activeSession.value = await api.aiSessionController.findById({ id: sessionId })
-    sessionList.value[index] = activeSession.value
+    const { result } = await api.aiSessionController.findById({ id: sessionId })
+    activeSession.value = result
+    sessionList.value[index] = result
   }
   return {
     isEdit,
@@ -64,6 +64,6 @@ export const useChatStore = defineStore('ai-chat', () => {
     handleUpdateSession,
     handleCreateSession,
     handleDeleteSession,
-    handleClearMessage
+    handleClearMessage,
   }
 })

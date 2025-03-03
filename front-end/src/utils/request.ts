@@ -5,19 +5,27 @@ import router from '@/router'
 const BASE_URL = import.meta.env.VITE_API_PREFIX
 export const request = axios.create({
   baseURL: BASE_URL,
-  timeout: 600000
+  timeout: 600000,
 })
 request.interceptors.response.use(
   (res) => {
-    return res.data.result
+    return res.data
   },
   ({ response }) => {
-    if (response.data.code !== 1) {
-      ElMessage.warning({ message: response.data.msg })
-    }
+    console.info('response:', response)
+
     if (response.data.code === 10012) {
-      router.push('/login')
+      localStorage.removeItem('X-Token')
+
+      router.push('/')
+      return
     }
-    return Promise.reject(response.data.result)
+
+    if (response.data.code !== 1) {
+      console.info()
+      ElMessage.warning({ message: 'Request failed, please try again later' })
+    }
+
+    return Promise.reject(response.data)
   }
 )

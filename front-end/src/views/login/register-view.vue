@@ -1,18 +1,7 @@
 <script lang="ts" setup>
-import {
-  ElAvatar,
-  ElButton,
-  ElCard,
-  ElCol,
-  ElForm,
-  ElFormItem,
-  ElInput,
-  ElRow,
-  type FormInstance,
-  type FormRules
-} from 'element-plus'
+import { ElAvatar, ElButton, ElCard, ElCol, ElForm, ElFormItem, ElInput, ElRow, type FormInstance, type FormRules } from 'element-plus'
 import { reactive, ref } from 'vue'
-import logo from '@/assets/logo.jpg'
+import logo from '@/assets/logo.png'
 import router from '@/router'
 import background from '@/assets/background.jpg'
 import { api } from '@/utils/api-instance'
@@ -26,8 +15,8 @@ const rules = reactive<FormRules<typeof registerForm>>({
   phone: [{ required: true, message: '请输入手机号', trigger: 'blur' }],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { max: 16, min: 6, message: '密码长度介于6，16' }
-  ]
+    { max: 16, min: 6, message: '密码长度介于6，16' },
+  ],
 })
 const handleRegister = async () => {
   if (!ruleFormRef.value) return
@@ -57,14 +46,7 @@ const handleRegister = async () => {
               <div class="panel-right">
                 <div class="title">快速开始</div>
                 <div class="description">创建你的账号</div>
-                <el-form
-                  ref="ruleFormRef"
-                  :model="registerForm"
-                  :rules="rules"
-                  class="form"
-                  label-position="top"
-                  label-width="100px"
-                >
+                <el-form ref="ruleFormRef" :model="registerForm" :rules="rules" class="form" label-position="top" label-width="100px">
                   <el-form-item label="手机号" prop="phone">
                     <el-input v-model="registerForm.phone"></el-input>
                   </el-form-item>
@@ -73,12 +55,8 @@ const handleRegister = async () => {
                   </el-form-item>
                 </el-form>
                 <div class="button-wrapper">
-                  <el-button class="register" type="primary" @click="handleRegister">
-                    注册
-                  </el-button>
-                  <el-button class="login" size="small" link @click="router.replace('/login')">
-                    登录
-                  </el-button>
+                  <el-button class="register" type="primary" @click="handleRegister"> 注册 </el-button>
+                  <el-button class="login" size="small" link @click="router.replace('/login')"> 登录 </el-button>
                 </div>
               </div>
             </div>

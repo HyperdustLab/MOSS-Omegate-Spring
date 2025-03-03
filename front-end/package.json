@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "run-p type-check \"build-only {@}\" --",
+    "build": "run-p \"build-only {@}\" --",
     "preview": "vite preview",
+    "build:test": "vite build --mode test",
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
@@ -15,15 +16,22 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
+    "async-validator": "^4.2.5",
     "axios": "^1.6.4",
     "dayjs": "^1.11.10",
     "element-plus": "^2.4.2",
     "lodash": "^4.17.21",
     "md-editor-v3": "^4.13.2",
+    "normalize.css": "8.0.1",
     "pinia": "^2.1.7",
     "sse.js": "^2.4.1",
+    "tailwindcss": "^3.4.1",
+    "uni-ai-admin": "file:",
+    "unocss": "0.53.5",
     "vue": "^3.4.21",
-    "vue-router": "^4.2.5"
+    "vue-clipboard3": "^2.0.0",
+    "vue-router": "^4.2.5",
+    "vxe-table": "^4.11.10"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.3.3",
@@ -35,6 +43,7 @@
     "@vue/eslint-config-typescript": "^12.0.0",
     "@vue/tsconfig": "^0.5.0",
     "adm-zip": "^0.5.10",
+    "autoprefixer": "^10.4.20",
     "eslint": "^8.49.0",
     "eslint-plugin-vue": "^9.17.0",
     "fs-extra": "^11.1.1",

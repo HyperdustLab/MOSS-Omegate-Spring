@@ -21,25 +21,30 @@ import redis.clients.jedis.JedisPooled;
 @AllArgsConstructor
 public class RedisVectorConfig {
 
-    /**
-     * 创建RedisStack向量数据库
-     *
-     * @param embeddingModel 嵌入模型
-     * @param properties     redis-stack的配置信息
-     * @return vectorStore 向量数据库
-     */
-    @Bean
-    public VectorStore vectorStore(EmbeddingModel embeddingModel,
-                                   RedisVectorStoreProperties properties,
-                                   RedisConnectionDetails redisConnectionDetails) {
-        JedisPooled jedisPooled = new JedisPooled(redisConnectionDetails.getStandalone().getHost(),
-                redisConnectionDetails.getStandalone().getPort()
-                , redisConnectionDetails.getUsername(),
-                redisConnectionDetails.getPassword());
-        return RedisVectorStore.builder(jedisPooled, embeddingModel)
-                .indexName(properties.getIndex())
-                .prefix(properties.getPrefix())
-                .initializeSchema(properties.isInitializeSchema())
-                .build();
-    }
+  /**
+   * 创建RedisStack向量数据库
+   *
+   * @param embeddingModel 嵌入模型
+   * @param properties redis-stack的配置信息
+   * @return vectorStore 向量数据库
+   */
+  @Bean
+  public VectorStore vectorStore(
+      EmbeddingModel embeddingModel,
+      RedisVectorStoreProperties properties,
+      RedisConnectionDetails redisConnectionDetails) {
+    JedisPooled jedisPooled =
+        new JedisPooled(
+            redisConnectionDetails.getStandalone().getHost(),
+            redisConnectionDetails.getStandalone().getPort(),
+            redisConnectionDetails.getUsername(),
+            redisConnectionDetails.getPassword());
+    return RedisVectorStore.builder(jedisPooled, embeddingModel)
+        .indexName(properties.getIndex())
+        .metadataFields()
+        .prefix(properties.getPrefix())
+        .metadataFields(RedisVectorStore.MetadataField.text("userId"))
+        .initializeSchema(properties.isInitializeSchema())
+        .build();
+  }
 }

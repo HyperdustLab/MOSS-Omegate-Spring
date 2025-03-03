@@ -1,18 +1,70 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
+import enUs from 'element-plus/dist/locale/en.mjs'
 </script>
 
 <template>
-  <el-config-provider :locale="zhCn">
+  <el-config-provider :locale="enUs">
     <router-view v-slot="{ Component }">
       <transition name="slide">
         <component :is="Component" />
-      </transition> </router-view
-  ></el-config-provider>
+      </transition>
+    </router-view>
+  </el-config-provider>
 </template>
 
-<style>
+<style lang="scss">
+.footer {
+  background-color: #333; /* 更改为深色背景 */
+  padding: 20px 0;
+  text-align: center;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footer-link {
+  color: #fff; /* 更改为浅色文字 */
+  text-decoration: none;
+  margin-right: 20px;
+}
+
+.footer-link:hover {
+  text-decoration: underline;
+}
+
+.footer-copyright {
+  color: #aaa; /* 更改为浅色文字 */
+  font-size: 14px;
+}
+
+.dark-message-box {
+  background-color: #141414;
+  border-color: #4c4d4f;
+
+  .el-message-box__title {
+    color: #ffffff;
+  }
+
+  .el-message-box__content {
+    color: #ffffff;
+  }
+
+  .el-message-box__btns {
+    .el-button {
+      background-color: #626262;
+      border-color: #4c4d4f;
+      color: #ffffff;
+
+      &:hover {
+        background-color: #8a8a8a;
+      }
+    }
+  }
+}
+
 body {
   margin: 0;
   font-family:
@@ -25,6 +77,8 @@ body {
     Helvetica,
     Arial,
     sans-serif;
+  background-color: #141414;
+  color: #ffffff;
 }
 
 .el-date-editor--datetime {

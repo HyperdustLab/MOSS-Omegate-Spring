@@ -7,19 +7,19 @@ type Message = {
   text: string
   image: string
 }
-// 发送消息消息事件
+// Send message event
 const emit = defineEmits<{
   send: [message: Message]
 }>()
-// 输入框内的消息
+// Message in input box
 const message = ref<Message>({ text: '', image: '' })
 const sendMessage = () => {
   if (!message.value.text) {
-    ElMessage.warning('请输入消息')
+    ElMessage.warning('Please enter a message')
     return
   }
   emit('send', message.value)
-  // 发送完清除
+  // Clear after sending
   message.value = { text: '', image: '' }
 }
 </script>
@@ -27,24 +27,16 @@ const sendMessage = () => {
 <template>
   <div class="message-input">
     <div class="input-wrapper">
-      <!-- 按回车键发送，输入框高度三行 -->
-      <el-input
-        v-model="message.text"
-        :autosize="false"
-        :rows="3"
-        class="input"
-        resize="none"
-        type="textarea"
-        @keydown.enter.prevent="sendMessage"
-      >
-      </el-input>
+      <!-- Press enter to send, input box height is 3 lines -->
+      <el-input v-model="message.text" :autosize="false" :rows="3" class="input" resize="none" type="textarea" @keydown.enter.prevent="sendMessage"> </el-input>
       <div class="button-wrapper">
-        <image-upload class="image" :size="40" v-model="message.image"></image-upload>
+        <image-upload class="image" :size="40" v-model="message.image" @click.prevent disabled></image-upload>
+
         <el-button type="primary" @click="sendMessage">
           <el-icon class="el-icon--left">
             <Position />
           </el-icon>
-          发送
+          Send
         </el-button>
       </div>
     </div>
@@ -54,13 +46,26 @@ const sendMessage = () => {
 <style lang="scss" scoped>
 .message-input {
   padding: 20px 20px 0 20px;
-  border-top: 1px solid rgba(black, 0.07);
-  border-left: 1px solid rgba(black, 0.07);
-  border-right: 1px solid rgba(black, 0.07);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
   border-top-right-radius: 5px;
   border-top-left-radius: 5px;
+  background-color: #1e1e1e;
   .el-form-item {
     align-items: center;
+  }
+
+  :deep(.el-textarea__inner) {
+    background-color: #2b2b2b;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    box-shadow: 0 0 0 1px #282c34 inset;
+
+    &:hover,
+    &:focus {
+      border-color: #409eff;
+    }
   }
 }
 

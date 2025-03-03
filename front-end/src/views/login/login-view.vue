@@ -1,40 +1,25 @@
 <script lang="ts" setup>
-import {
-  ElAvatar,
-  ElButton,
-  ElCard,
-  ElCol,
-  ElForm,
-  ElFormItem,
-  ElInput,
-  ElRow,
-  type FormInstance,
-  type FormRules
-} from 'element-plus'
+import { ElAvatar, ElButton, ElCard, ElCol, ElForm, ElFormItem, ElInput, ElRow, type FormInstance, type FormRules } from 'element-plus'
 import { onMounted, reactive, ref, Transition } from 'vue'
-import logo from '@/assets/logo.jpg'
+import logo from '@/assets/logo.png'
 import router from '@/router'
 import background from '@/assets/background.jpg'
 import { api } from '@/utils/api-instance'
 import type { UserLoginInput } from '@/apis/__generated/model/static'
+import { useRoute } from 'vue-router'
+const route = useRoute()
+const token = route.query.token as string
 
-const loginForm = reactive<UserLoginInput>({ phone: '', password: '' })
-const ruleFormRef = ref<FormInstance>()
-const rules = reactive<FormRules<typeof loginForm>>({
-  phone: [{ required: true, message: '请输入手机号', trigger: 'blur' }],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { max: 16, min: 6, message: '密码长度介于6，16' }
-  ]
-})
+const loginForm = reactive<UserLoginInput>({ token: token })
+
 const showPanel = ref(false)
 onMounted(() => {
-  setTimeout(() => {
-    showPanel.value = true
-  }, 1000)
+  handleLogin()
 })
 const handleLogin = async () => {
-  const res = await api.userController.login({ body: loginForm })
+  const res = await api.userController.login({
+    body: loginForm,
+  })
   localStorage.setItem('token', res.tokenValue)
   await router.replace({ path: '/' })
 }
@@ -55,32 +40,10 @@ const handleLogin = async () => {
               <div class="panel-right">
                 <div class="title">快速开始</div>
                 <div class="description">登录你的账号</div>
-                <el-form
-                  ref="ruleFormRef"
-                  :model="loginForm"
-                  :rules="rules"
-                  class="form"
-                  label-position="top"
-                  label-width="100px"
-                >
-                  <el-form-item label="手机号">
-                    <el-input v-model="loginForm.phone"></el-input>
-                  </el-form-item>
-                  <el-form-item label="密码">
-                    <el-input v-model="loginForm.password" type="password"></el-input>
-                  </el-form-item>
-                </el-form>
+                <el-form ref="ruleFormRef" :model="loginForm" :rules="rules" class="form" label-position="top" label-width="100px"> </el-form>
                 <div class="button-wrapper">
                   <el-button class="login" type="primary" @click="handleLogin"> 登录</el-button>
-                  <el-button
-                    class="register"
-                    type="info"
-                    size="small"
-                    link
-                    @click="() => router.push('/register')"
-                  >
-                    注册
-                  </el-button>
+                  <el-button class="register" type="info" size="small" link @click="() => router.push('/register')"> 注册 </el-button>
                 </div>
               </div>
             </div>
