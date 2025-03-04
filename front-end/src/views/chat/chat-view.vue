@@ -281,15 +281,11 @@ const fileList = ref<UploadUserFile[]>([])
         <div class="option-panel">
           <el-form size="small" v-if="agent && agent.agentId">
             <el-form-item label="RAG Knowledge">
-              <!-- <el-upload v-loading="embeddingLoading" multiple name="files" :action="`${API_PREFIX}/document/embedding`" :show-file-list="false" :on-success="onUploadSuccess" :before-upload="beforeUpload">
+              <el-upload v-loading="embeddingLoading" multiple name="files" :action="`${API_PREFIX}/document/embedding`" :show-file-list="false" :on-success="onUploadSuccess" :before-upload="beforeUpload">
                 <el-button class="ml-50" type="primary">
                   <p style="color: white">Upload</p>
                 </el-button>
-              </el-upload> -->
-
-              <el-button class="ml-50" @click="showUploadEmbedding" type="primary">
-                <p style="color: white">Upload</p>
-              </el-button>
+              </el-upload>
             </el-form-item>
             <el-form-item label="Enable Knowledge Base">
               <el-switch class="ml-43" v-model="options.enableVectorStore" style="--el-switch-on-color: #13ce66"></el-switch>
