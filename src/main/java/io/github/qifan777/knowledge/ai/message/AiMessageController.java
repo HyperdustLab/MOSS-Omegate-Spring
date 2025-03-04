@@ -2,12 +2,17 @@ package io.github.qifan777.knowledge.ai.message;
 
 import cn.dev33.satoken.annotation.SaIgnore;
 import cn.dev33.satoken.stp.StpUtil;
+import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.qifan777.knowledge.ai.agent.Agent;
 import io.github.qifan777.knowledge.ai.message.dto.AiMessageInput;
 import io.github.qifan777.knowledge.ai.message.dto.AiMessageWrapper;
 import io.github.qifan777.knowledge.ai.session.AiSessionRepository;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -28,6 +33,8 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter.Expression;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.util.CollectionUtils;
@@ -39,6 +46,7 @@ import reactor.core.publisher.Flux;
 @AllArgsConstructor
 @Slf4j
 public class AiMessageController {
+  private static String templateContent = null;
   private final AiMessageChatMemory chatMemory;
   private final ChatModel chatModel;
   //  private final ImageModel imageModel;
@@ -48,10 +56,21 @@ public class AiMessageController {
   private final ApplicationContext applicationContext;
   private final AiSessionRepository sessionRepository;
 
+  private final ResourceLoader resourceLoader;
+
   @DeleteMapping("history/{sessionId}")
   public void deleteHistory(@PathVariable String sessionId) {
     chatMemory.clear(sessionId);
   }
+
+  //  @PostMapping("chat/image")
+  //  public String textToImageChat(@RequestBody AiMessageInput input) {
+  //    return imageModel
+  //        .call(new ImagePrompt(input.getTextContent()))
+  //        .getResult()
+  //        .getOutput()
+  //        .getUrl();
+  //  }
 
   /**
    * 消息保存
@@ -63,15 +82,6 @@ public class AiMessageController {
   public void save(@RequestBody AiMessageInput input) {
     messageRepository.save(input.toEntity());
   }
-
-  //  @PostMapping("chat/image")
-  //  public String textToImageChat(@RequestBody AiMessageInput input) {
-  //    return imageModel
-  //        .call(new ImagePrompt(input.getTextContent()))
-  //        .getResult()
-  //        .getOutput()
-  //        .getUrl();
-  //  }
 
   /**
    * 为了支持文件问答，需要同时接收json（AiMessageWrapper json体）和 MultipartFile（文件） Content-Type 从 application/json
@@ -119,25 +129,60 @@ public class AiMessageController {
       functionBeanNames = new String[beansWithAnnotation.size()];
       functionBeanNames = beansWithAnnotation.keySet().toArray(functionBeanNames);
     }
-    return ChatClient.create(chatModel)
-        .prompt()
-        // 启用文件问答
-        .system(promptSystemSpec -> useFile(promptSystemSpec, content))
-        .user(promptUserSpec -> toPrompt(promptUserSpec, aiMessageWrapper.getMessage()))
-        // agent列表
-        .functions(functionBeanNames)
-        .advisors(
-            advisorSpec -> {
-              // 使用历史消息
-              useChatHistory(advisorSpec, aiMessageWrapper.getMessage().getSessionId());
-              // 使用向量数据库
-              useVectorStore(
-                  advisorSpec,
-                  aiMessageWrapper.getParams().getEnableVectorStore(),
-                  finalUserId,
-                  aiMessageWrapper.getMessage().getTextContent());
-            })
-        .stream()
+
+    if (templateContent == null) {
+
+      Resource resource = resourceLoader.getResource("classpath:prompt.st");
+
+      InputStream inputStream = resource.getInputStream();
+
+      templateContent = IoUtil.read(inputStream, StandardCharsets.UTF_8);
+    }
+
+    List<Message> chatMemoryList =
+        new ArrayList<>(chatMemory.get(aiMessageWrapper.getMessage().getSessionId(), 30));
+    Collections.reverse(chatMemoryList);
+
+    List<String> chatMemoryStrList =
+        chatMemoryList.stream()
+            .map(
+                i -> {
+                  String generated_text = i.getText();
+
+                  generated_text = generated_text.replaceAll("(?s)<think>.*?</think>", "");
+                  generated_text = generated_text.replaceAll("^\\n", "");
+
+                  return generated_text;
+                })
+            .toList();
+
+    String context = StrUtil.join("\n", chatMemoryStrList);
+
+    FilterExpressionBuilder b = new FilterExpressionBuilder();
+
+    Expression exp = b.eq("userId", userId).build();
+
+    log.info("filterExpression: {}", exp);
+
+    SearchRequest searchRequest =
+        SearchRequest.builder()
+            .filterExpression(exp)
+            .query(aiMessageWrapper.getMessage().getTextContent())
+            .build();
+
+    List<Document> documentList = vectorStore.similaritySearch(searchRequest);
+
+    List<String> knowledgeBaseList = documentList.stream().map(Document::getText).toList();
+
+    String knowledge_base = StrUtil.join("\n", knowledgeBaseList);
+
+    String user_input = aiMessageWrapper.getMessage().getTextContent();
+
+    String prompt = StrUtil.format(templateContent, content, knowledge_base, context, user_input);
+
+    log.info("prompt: {}", prompt);
+
+    return ChatClient.create(chatModel).prompt(prompt).stream()
         .chatResponse()
         .map(
             chatResponse ->
@@ -170,7 +215,7 @@ public class AiMessageController {
     // 2. 传入会话id，MessageChatMemoryAdvisor会根据会话id去查找消息。
     // 3. 只需要携带最近10条消息
     // MessageChatMemoryAdvisor会在消息发送给大模型之前，从ChatMemory中获取会话的历史消息，然后一起发送给大模型。
-    advisorSpec.advisors(new MessageChatMemoryAdvisor(chatMemory, sessionId, 50));
+    advisorSpec.advisors(new MessageChatMemoryAdvisor(chatMemory, sessionId, 10));
   }
 
   public void useVectorStore(
