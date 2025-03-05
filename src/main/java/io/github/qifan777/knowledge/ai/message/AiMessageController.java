@@ -12,7 +12,6 @@ import io.github.qifan777.knowledge.ai.session.AiSessionRepository;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -141,7 +140,6 @@ public class AiMessageController {
 
     List<Message> chatMemoryList =
         new ArrayList<>(chatMemory.get(aiMessageWrapper.getMessage().getSessionId(), 30));
-    Collections.reverse(chatMemoryList);
 
     List<String> chatMemoryStrList =
         chatMemoryList.stream()
@@ -160,7 +158,7 @@ public class AiMessageController {
 
     FilterExpressionBuilder b = new FilterExpressionBuilder();
 
-    Expression exp = b.eq("userId", userId).build();
+    Expression exp = b.in("userId", userId, "public").build();
 
     log.info("filterExpression: {}", exp);
 

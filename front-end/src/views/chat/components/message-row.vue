@@ -1,6 +1,6 @@
 <script lang="tsx" setup>
 import TextLoading from './text-loading.vue'
-import logo from '@/assets/logo.png'
+import logo from '@/assets/logo1.jpg'
 import MarkdownMessage from './markdown-message.vue'
 import type { AiMessage } from '../store/chat-store'
 import { computed } from 'vue'

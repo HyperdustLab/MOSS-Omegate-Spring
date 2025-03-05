@@ -202,6 +202,27 @@ async function getSystemPrompt() {
   }
 
   systemPrompt.value = res.result
+
+  if (!systemPrompt.value) {
+    getMossaiPrompt()
+  }
+}
+
+async function getMossaiPrompt() {
+  const res = await request({
+    url: BASE_URL + '/mgn/agentNpc/list',
+    method: 'GET',
+    params: {
+      name: 'MOSS',
+    },
+    headers: {
+      'X-Access-Token': token.value,
+    },
+  })
+
+  const records = res.result.records
+
+  systemPrompt.value = records[0].alpacaPrompt
 }
 
 async function getAgent() {
