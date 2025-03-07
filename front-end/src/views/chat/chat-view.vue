@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { nextTick, onMounted, ref, Text } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, Text } from 'vue'
 import SessionItem from './components/session-item.vue'
 import { ChatRound, Close, Delete, EditPen, Upload } from '@element-plus/icons-vue'
 import MessageRow from './components/message-row.vue'
@@ -18,7 +18,6 @@ import user from '@/assets/user.png'
 
 import { request } from '@/utils/request'
 
-import { useRoute } from 'vue-router'
 type ChatResponse = {
   metadata: {
     usage: {
@@ -38,8 +37,11 @@ type ChatResponse = {
 const API_PREFIX = import.meta.env.VITE_API_PREFIX
 const chatStore = useChatStore()
 const { handleDeleteSession, handleUpdateSession, handleClearMessage } = chatStore
-const { activeSession, sessionList, isEdit } = storeToRefs(chatStore)
+// const { activeSession, sessionList, isEdit } = storeToRefs(chatStore)
 const messageListRef = ref<InstanceType<typeof HTMLDivElement>>()
+
+const activeSession = ref(null)
+const sessionList = ref([])
 
 import logoutPng from '@/assets/image/logout.png?url'
 
@@ -54,41 +56,44 @@ const BASE_URL = import.meta.env.VITE_API_HYPERAGI_API
 const systemPrompt = ref('')
 
 const agent = ref(null)
+const myAgent = ref(null)
+
+const messageList = ref([])
 
 const token = ref(localStorage.getItem('X-Token'))
 
 const uploadEmbeddingRef = ref<InstanceType<typeof UploadEmbedding>>()
 
+const agentList = ref([])
+
+// 添加分页相关参数
+const pageNum = ref(1)
+const pageSize = ref(15)
+const total = ref(0)
+const noMore = ref(false)
+
+// 添加选中的agent id
+const selectAgent = ref(null)
+const selectAgentId = ref(null)
+
 onMounted(async () => {
-  // Query user's chat sessions
-  api.aiSessionController.findByUser().then((res) => {
-    if (!res) {
-      return
-    }
-
-    // Add sessions to list
-    sessionList.value = res.result.map((row) => {
-      return { ...row, checked: false }
-    })
-    // Default select first chat session
-    if (sessionList.value.length > 0) {
-      activeSession.value = sessionList.value[0]
-    } else {
-      handleSessionCreate()
-    }
-    loading.value = false
-  })
-
-  getSystemPrompt()
-  getAgent()
-
-  const route = await useRoute()
-
   if (!localStorage.getItem('X-Token')) {
     loginRef.value.show()
   } else {
-    getLoginUser()
+    await getLoginUser()
+
+    await getAgent()
+
+    await getAgentList()
   }
+
+  // 添加滚动监听
+  contactListRef.value?.addEventListener('scroll', handleScroll)
+})
+
+// 组件卸载时移除监听
+onUnmounted(() => {
+  contactListRef.value?.removeEventListener('scroll', handleScroll)
 })
 
 // ChatGPT response
@@ -100,11 +105,44 @@ const responseMessage = ref<AiMessage>({
   sessionId: '',
 })
 
+async function getSessionList() {
+  const { result } = await request({
+    url: BASE_URL + '/mgn/aiSession/list',
+    method: 'GET',
+    headers: {
+      'X-Access-Token': token.value,
+    },
+
+    params: {
+      pageNo: 1,
+      pageSize: 10,
+      column: 'createdTime',
+      order: 'desc',
+      creatorId: loginUser.value.id,
+      agentId: selectAgent.value.sid,
+    },
+  })
+
+  sessionList.value = result.records
+
+  if (sessionList.value.length === 0) {
+    handleSessionCreate()
+  } else {
+    handleSelectSession(sessionList.value[0])
+  }
+}
+
+function handleSelectSession(session) {
+  activeSession.value = session
+  getMessageList()
+}
+
 const handleSendMessage = async (message: { text: string; image: string }) => {
   if (!activeSession.value) {
     ElMessage.warning('Please create a session')
     return
   }
+
   // Image/Audio
   const medias: AiMessage['medias'] = []
   if (message.image) {
@@ -112,24 +150,42 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
   }
   // User question
   const chatMessage = {
-    id: new Date().getTime().toString(),
+    aiSessionId: activeSession.value.id,
     sessionId: activeSession.value.id,
     medias,
     textContent: message.text,
     type: 'USER',
-  } satisfies AiMessage
+    avatar: loginUser.value.avatar,
+    name: loginUser.value.walletAddress,
+    creatorId: loginUser.value.id,
+    editorId: loginUser.value.id,
+  }
 
   responseMessage.value = {
-    id: new Date().getTime().toString(),
     medias: [],
     type: 'ASSISTANT',
     textContent: '',
+    aiSessionId: activeSession.value.id,
     sessionId: activeSession.value.id,
+    avatar: selectAgent.value.avatar,
+    name: selectAgent.value.nickName,
+    creatorId: selectAgent.value.sid,
+    editorId: selectAgent.value.sid,
   }
-  const body: AiMessageWrapper = { message: chatMessage, params: options.value }
+
   const form = new FormData()
+
+  if (selectAgent.value) {
+    options.value.userId = selectAgent.value.sid
+    form.set('content', selectAgent.value.personalization)
+  } else {
+    form.set('content', systemPrompt.value)
+    options.value.userId = ''
+  }
+
+  const body: AiMessageWrapper = { message: chatMessage, params: options.value }
+
   form.set('input', JSON.stringify(body))
-  form.set('content', systemPrompt.value)
 
   if (fileList.value.length && fileList.value[0].raw) {
     form.append('file', fileList.value[0].raw)
@@ -153,25 +209,48 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
     }
     if (finishReason && finishReason.toLowerCase() == 'stop') {
       evtSource.close()
-      // Save user question
-      await api.aiMessageController.save({ body: chatMessage })
-      // Save AI response
-      await api.aiMessageController.save({ body: responseMessage.value })
+
+      await saveMessage(chatMessage)
+      await saveMessage(responseMessage.value)
     }
   })
 
   // Call stream to initiate request
   evtSource.stream()
+
   // Display both messages on page
-  activeSession.value.messages.push(...[chatMessage, responseMessage.value])
+  messageList.value.push(...[chatMessage, responseMessage.value])
   await nextTick(() => {
     messageListRef.value?.scrollTo(0, messageListRef.value.scrollHeight)
   })
 }
 
-const handleSessionCreate = () => {
-  chatStore.handleCreateSession({ name: 'New Chat' })
+async function saveMessage(message) {
+  await request({
+    url: BASE_URL + '/mgn/aiMessage/add',
+    method: 'POST',
+    data: message,
+    headers: {
+      'X-Access-Token': token.value,
+    },
+  })
 }
+
+const handleSessionCreate = async () => {
+  await request({
+    url: BASE_URL + '/mgn/aiSession/add',
+    method: 'POST',
+    data: {
+      agentId: selectAgent.value.sid,
+      name: 'New Chat',
+    },
+    headers: {
+      'X-Access-Token': token.value,
+    },
+  })
+  getSessionList()
+}
+
 const options = ref<AiMessageParams>({
   enableVectorStore: false,
   enableAgent: false,
@@ -179,15 +258,6 @@ const options = ref<AiMessageParams>({
 const embeddingLoading = ref(false)
 
 const loginUser = ref(null)
-
-const onUploadSuccess = () => {
-  embeddingLoading.value = false
-  ElMessage.success('Upload successful')
-}
-const beforeUpload: UploadProps['beforeUpload'] = () => {
-  embeddingLoading.value = true
-  return true
-}
 
 async function getSystemPrompt() {
   const res = await request({
@@ -226,18 +296,61 @@ async function getMossaiPrompt() {
 }
 
 async function getAgent() {
-  const res = await request({
-    url: '/user/getAgent',
+  const { result } = await request({
+    url: BASE_URL + '/mgn/agent/list',
     method: 'GET',
+    headers: {
+      'X-Access-Token': token.value,
+    },
+    params: {
+      walletAddress: loginUser.value.walletAddress || loginUser.value.email,
+    },
   })
 
-  if (res.code === 10012) {
-    localStorage.removeItem('X-Token')
-    location.reload()
-    return
-  }
+  const records = result.records
 
-  agent.value = res.result
+  if (records.length > 0) {
+    agent.value = records[0]
+    myAgent.value = records[0]
+    handleSelectAgent(records[0])
+  }
+}
+
+// 修改获取agent列表的方法
+async function getAgentList(isLoadMore = false) {
+  if (loading.value || noMore.value) return
+
+  loading.value = true
+  try {
+    const { result } = await request({
+      url: BASE_URL + '/mgn/agent/list',
+      params: {
+        pageNo: pageNum.value,
+        pageSize: pageSize.value,
+        column: 'createTime',
+        order: 'desc',
+      },
+      method: 'GET',
+      headers: {
+        'X-Access-Token': token.value,
+      },
+    })
+
+    total.value = result.total
+
+    if (isLoadMore) {
+      agentList.value = [...agentList.value, ...result.records]
+    } else {
+      agentList.value = result.records
+    }
+
+    // 判断是否还有更多数据
+    noMore.value = agentList.value.length >= total.value
+  } catch (error) {
+    console.error(error)
+  } finally {
+    loading.value = false
+  }
 }
 
 async function getLoginUser() {
@@ -276,38 +389,120 @@ function showUploadEmbedding() {
 }
 
 const fileList = ref<UploadUserFile[]>([])
+
+// 添加滚动加载方法
+const contactListRef = ref<HTMLElement>()
+const handleScroll = () => {
+  if (!contactListRef.value) return
+
+  const { scrollTop, scrollHeight, clientHeight } = contactListRef.value
+  // 当滚动到距离底部20px时触发加载
+  if (scrollHeight - scrollTop - clientHeight < 20) {
+    loadMore()
+  }
+}
+
+// 加载更多
+const loadMore = () => {
+  if (loading.value || noMore.value) return
+  pageNum.value++
+  getAgentList(true)
+}
+
+// 添加选中方法
+const handleSelectAgent = (_agent) => {
+  if (_agent) {
+    selectAgent.value = _agent
+    selectAgentId.value = _agent.id
+    agent.value = _agent
+  } else {
+    selectAgent.value = myAgent.value
+    selectAgentId.value = selectAgent.value.id
+  }
+
+  console.info('selectAgentId.value', selectAgentId.value)
+
+  getSessionList()
+}
+
+async function getMessageList() {
+  const { result } = await request({
+    url: BASE_URL + '/mgn/aiMessage/list',
+    method: 'GET',
+    headers: {
+      'X-Access-Token': token.value,
+    },
+    params: {
+      aiSessionId: activeSession.value.id,
+      pageSize: -1,
+      column: 'createTime',
+      order: 'desc',
+    },
+  })
+
+  messageList.value = result.records
+}
 </script>
 <template>
   <!-- Outer page same width as window, center chat panel -->
   <div class="home-view">
     <!-- Entire chat panel -->
     <div class="chat-panel" v-loading="loading">
-      <!-- Left session list -->
-      <div class="session-panel">
-        <div class="flex flex-col items-center gap-4" @click="goHome">
-          <img src="../../assets/logo1.gif" loading="lazy" class="w-20" alt="logo" style="margin-right: 80%" />
+      <!-- 将联系人列表移到最左边 -->
+      <div class="contact-panel w-64 border-r border-gray-700 bg-[#141414] p-4 h-full">
+        <!-- 添加LOGO部分 -->
+        <div class="flex flex-col items-start gap-4 mb-6" @click="goHome">
+          <img src="../../assets/logo1.gif" loading="lazy" class="w-10" alt="logo" />
         </div>
 
-        <div class="button-wrapper mt-10">
+        <!-- 我的Agent部分 -->
+        <div class="text-white text-lg mb-4">My Agent</div>
+        <div class="space-y-4 mb-6">
+          <div v-if="myAgent" class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors duration-200" :class="{ 'bg-gray-700': selectAgentId === myAgent.id }" @click="handleSelectAgent(selectAgentId === myAgent.id ? null : myAgent)">
+            <el-avatar :size="40" :src="myAgent.avatar" />
+            <div>
+              <div class="text-white text-sm">{{ myAgent.nickName }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-white text-lg mb-4">Agent List</div>
+        <div ref="contactListRef" class="h-[calc(80vh-80px)] overflow-y-auto custom-scrollbar" style="max-height: calc(90% - 120px)">
+          <div class="space-y-4">
+            <div v-for="agent in agentList" :key="agent.id" class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors duration-200" :class="{ 'bg-gray-700': selectAgentId === agent.id }" @click="handleSelectAgent(selectAgentId === agent.id ? null : agent)">
+              <el-avatar :size="40" :src="agent.avatar" />
+              <div>
+                <div class="text-white text-sm">{{ agent.nickName }}</div>
+              </div>
+            </div>
+
+            <!-- Loading status -->
+            <div v-if="loading" class="text-center py-4 text-gray-400">Loading...</div>
+
+            <!-- No more data -->
+            <div v-if="noMore && agentList.length > 0" class="text-center py-4 text-gray-400">No more data</div>
+
+            <!-- No data -->
+            <div v-if="!loading && agentList.length === 0" class="text-center py-4 text-gray-400">No data</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 会话列表面板 -->
+      <div class="session-panel w-64 border-r border-gray-700 bg-[#141414] p-4 h-full">
+        <div class="button-wrapper mt-20">
           <div class="create-session-btn cursor-pointer flex flex-col items-center justify-center px-4 py-2 text-sm hover:bg-gray-700 rounded" @click="handleSessionCreate">
             <img style="width: 30px" src="../../assets/create.png" class="create-icon" />
           </div>
         </div>
 
-        <div class="session-list" v-if="activeSession">
-          <!-- Loop through session list using session component, listen for click and delete events. Switch to clicked session on click, remove deleted session from list on delete. -->
-          <session-item v-for="session in sessionList" :key="session.id" :active="session.id === activeSession.id" :session="session" class="session" @click="activeSession = session" @delete="handleDeleteSession"></session-item>
+        <div class="session-list h-[calc(80vh-80px)] overflow-y-auto custom-scrollbar" v-if="activeSession">
+          <session-item v-for="session in sessionList" :key="session.id" :active="session.id === activeSession.id" :session="session" class="session" @click="handleSelectSession(session)" @delete="handleDeleteSession" />
         </div>
 
         <div class="option-panel">
-          <el-form size="small" v-if="agent && agent.agentId">
+          <el-form size="small" v-if="myAgent && myAgent.id">
             <el-form-item label="RAG Knowledge">
-              <!-- <el-upload v-loading="embeddingLoading" multiple name="files" :action="`${API_PREFIX}/document/embedding`" :show-file-list="false" :on-success="onUploadSuccess" :before-upload="beforeUpload">
-                <el-button class="ml-50" type="primary">
-                  <p style="color: white">Upload</p>
-                </el-button>
-              </el-upload> -->
-
               <el-button class="ml-50" @click="showUploadEmbedding" type="primary">
                 <p style="color: white">Upload</p>
               </el-button>
@@ -315,20 +510,11 @@ const fileList = ref<UploadUserFile[]>([])
             <el-form-item label="Enable Knowledge Base">
               <el-switch class="ml-43" v-model="options.enableVectorStore" style="--el-switch-on-color: #13ce66"></el-switch>
             </el-form-item>
-            <!-- <el-form-item label="agent">
-              <el-switch v-model="options.enableAgent"></el-switch>
-            </el-form-item>
-            <el-form-item label="File">
-              <div class="upload">
-                <el-upload v-model:file-list="fileList" :auto-upload="false" :limit="1">
-                  <el-button type="primary">Upload Text File</el-button>
-                </el-upload>
-              </div>
-            </el-form-item> -->
           </el-form>
         </div>
       </div>
-      <!-- Right message history -->
+
+      <!-- 消息面板 -->
       <div class="message-panel">
         <!-- Session name -->
         <div class="header" v-if="activeSession">
@@ -340,7 +526,7 @@ const fileList = ref<UploadUserFile[]>([])
             </div>
             <!-- Otherwise show normal title -->
             <div v-else class="title">{{ activeSession.name }}</div>
-            <div class="description">{{ activeSession.messages.length }} messages</div>
+            <!-- <div class="description">{{ activeSession.messages.length }} messages</div> -->
           </div>
           <!-- Edit buttons at end -->
           <div class="rear">
@@ -359,7 +545,7 @@ const fileList = ref<UploadUserFile[]>([])
         <div ref="messageListRef" class="message-list">
           <!-- Transition effect -->
           <transition-group name="list" v-if="activeSession && agent">
-            <message-row v-for="message in activeSession.messages" :agent-avatar="agent.agentAvatar" :avatar="agent.avatar || user" :key="message.id" :message="message"></message-row>
+            <message-row v-for="message in messageList" :agent-avatar="message.avatar" :avatar="loginUser.avatar || user" :key="message.id" :message="message"></message-row>
           </transition-group>
         </div>
         <!-- Listen for send event -->
@@ -588,7 +774,7 @@ const fileList = ref<UploadUserFile[]>([])
 
     /* Right message history panel */
     .message-panel {
-      width: 100%;
+      width: calc(100% - 500px);
       height: 100%;
       display: flex;
       flex-direction: column;
@@ -651,5 +837,26 @@ const fileList = ref<UploadUserFile[]>([])
       }
     }
   }
+}
+
+// 修改滚动条样式
+.custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+}
+
+// 可以添加选中状态的过渡效果
+.transition-colors {
+  transition: background-color 0.2s ease;
 }
 </style>

@@ -17,11 +17,6 @@ const router = createRouter({
       component: LoginView,
     },
     {
-      path: '/register',
-      name: 'register',
-      component: RegisterView,
-    },
-    {
       path: '/analyze',
       component: AnalyzeResultView,
       props(to) {
