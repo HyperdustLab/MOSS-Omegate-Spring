@@ -12,6 +12,8 @@ import { type AiMessage, useChatStore } from './store/chat-store'
 import type { AiMessageParams, AiMessageWrapper } from '@/apis/__generated/model/static'
 import Login from '@/components/Login/index.vue'
 
+import { ElMessageBox } from 'element-plus'
+
 import UploadEmbedding from './components/uploadEmbedding.vue'
 
 import user from '@/assets/user.png'
@@ -36,7 +38,7 @@ type ChatResponse = {
 }
 const API_PREFIX = import.meta.env.VITE_API_PREFIX
 const chatStore = useChatStore()
-const { handleDeleteSession, handleUpdateSession, handleClearMessage } = chatStore
+// const { handleDeleteSession, handleUpdateSession, handleClearMessage } = chatStore
 // const { activeSession, sessionList, isEdit } = storeToRefs(chatStore)
 const messageListRef = ref<InstanceType<typeof HTMLDivElement>>()
 
@@ -175,13 +177,23 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
 
   const form = new FormData()
 
+  let content = ''
+
+  let agentName = ''
+
   if (selectAgent.value) {
     options.value.userId = selectAgent.value.sid
-    form.set('content', selectAgent.value.personalization)
+    content = selectAgent.value.personalization
+    agentName = selectAgent.value.nickName
   } else {
-    form.set('content', systemPrompt.value)
+    content = systemPrompt.value
     options.value.userId = ''
+    agentName = 'MOSS'
   }
+
+  content = content.replace('[agent name]', agentName)
+
+  form.set('content', content)
 
   const body: AiMessageWrapper = { message: chatMessage, params: options.value }
 
@@ -442,6 +454,45 @@ async function getMessageList() {
 
   messageList.value = result.records
 }
+async function handleDeleteSession(sessionId: string) {
+  try {
+    const result = await ElMessageBox.confirm('Are you sure you want to delete this session?', 'Warning', {
+      confirmButtonText: 'Confirm',
+      cancelButtonText: 'Cancel',
+      type: 'warning',
+      customClass: 'dark-message-box',
+      buttonSize: 'default',
+      confirmButtonClass: 'dark-confirm-button',
+      cancelButtonClass: 'dark-cancel-button',
+      draggable: true,
+      center: true,
+      roundButton: true,
+    })
+
+    if (result === 'confirm') {
+      await request({
+        url: BASE_URL + '/mgn/aiSession/delete',
+        method: 'DELETE',
+        headers: {
+          'X-Access-Token': token.value,
+        },
+        params: {
+          id: sessionId,
+        },
+      })
+
+      ElMessage({
+        type: 'success',
+        message: 'Deleted successfully',
+        customClass: 'dark-message',
+      })
+
+      getSessionList()
+    }
+  } catch {
+    // User cancelled deletion
+  }
+}
 </script>
 <template>
   <!-- Outer page same width as window, center chat panel -->
@@ -497,7 +548,7 @@ async function getMessageList() {
         </div>
 
         <div class="session-list h-[calc(80vh-80px)] overflow-y-auto custom-scrollbar" v-if="activeSession">
-          <session-item v-for="session in sessionList" :key="session.id" :active="session.id === activeSession.id" :session="session" class="session" @click="handleSelectSession(session)" @delete="handleDeleteSession" />
+          <session-item v-for="session in sessionList" :key="session.id" :active="session.id === activeSession.id" :session="session" class="session" @click="handleSelectSession(session)" @delete="handleDeleteSession(session.id)" />
         </div>
 
         <div class="option-panel">
@@ -531,7 +582,7 @@ async function getMessageList() {
           <!-- Edit buttons at end -->
           <div class="rear">
             <el-icon :size="20" style="margin-right: 10px; color: white">
-              <Delete @click="handleClearMessage(activeSession.id)" />
+              <Delete @click="handleDeleteSession(activeSession.id)" />
             </el-icon>
             <el-icon :size="20" style="color: white">
               <!-- Show edit button when not in edit mode -->
@@ -842,17 +893,15 @@ async function getMessageList() {
 // 修改滚动条样式
 .custom-scrollbar {
   &::-webkit-scrollbar {
-    width: 4px;
+    width: 0; // 将宽度设为0来隐藏滚动条
+    display: none; // 完全隐藏滚动条
   }
 
-  &::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
-  }
+  // 添加 Firefox 的滚动条隐藏
+  scrollbar-width: none;
 
-  &::-webkit-scrollbar-track {
-    background-color: transparent;
-  }
+  // 添加 IE 的滚动条隐藏
+  -ms-overflow-style: none;
 }
 
 // 可以添加选中状态的过渡效果
