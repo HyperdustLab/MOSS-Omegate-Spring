@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { nextTick, onMounted, onUnmounted, ref, Text } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, Text, watch } from 'vue'
 import SessionItem from './components/session-item.vue'
 import { ChatRound, Close, Delete, EditPen, Upload } from '@element-plus/icons-vue'
 import MessageRow from './components/message-row.vue'
@@ -62,6 +62,8 @@ const myAgent = ref(null)
 
 const messageList = ref([])
 
+const showSessionEdit = ref(false)
+
 const token = ref(localStorage.getItem('X-Token'))
 
 const uploadEmbeddingRef = ref<InstanceType<typeof UploadEmbedding>>()
@@ -77,6 +79,9 @@ const noMore = ref(false)
 // 添加选中的agent id
 const selectAgent = ref(null)
 const selectAgentId = ref(null)
+
+// 添加搜索相关的响应式变量
+const searchQuery = ref('')
 
 onMounted(async () => {
   if (!localStorage.getItem('X-Token')) {
@@ -328,20 +333,25 @@ async function getAgent() {
   }
 }
 
-// 修改获取agent列表的方法
+// 修改获取agent列表的方法，添加搜索参数
 async function getAgentList(isLoadMore = false) {
   if (loading.value || noMore.value) return
 
-  loading.value = true
   try {
+    const params = {
+      pageNo: pageNum.value,
+      pageSize: pageSize.value,
+      userOrderNum: true,
+    }
+
+    // 只有在搜索关键词不为空时才添加 nickName 参数
+    if (searchQuery.value.trim()) {
+      params.nickName = `*${searchQuery.value.trim()}*`
+    }
+
     const { result } = await request({
       url: BASE_URL + '/mgn/agent/list',
-      params: {
-        pageNo: pageNum.value,
-        pageSize: pageSize.value,
-        column: 'createTime',
-        order: 'desc',
-      },
+      params,
       method: 'GET',
       headers: {
         'X-Access-Token': token.value,
@@ -356,7 +366,6 @@ async function getAgentList(isLoadMore = false) {
       agentList.value = result.records
     }
 
-    // 判断是否还有更多数据
     noMore.value = agentList.value.length >= total.value
   } catch (error) {
     console.error(error)
@@ -364,6 +373,36 @@ async function getAgentList(isLoadMore = false) {
     loading.value = false
   }
 }
+
+// 添加搜索处理函数
+const handleSearch = () => {
+  pageNum.value = 1 // 重置页码
+  noMore.value = false // 重置 noMore 状态
+  agentList.value = [] // 清空现有列表
+  getAgentList() // 重新获取数据
+}
+
+// 添加防抖处理
+let searchTimer = null
+const debouncedSearch = () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    handleSearch()
+  }, 300)
+}
+
+// 修改 watch 处理
+watch(searchQuery, () => {
+  if (!searchQuery.value.trim()) {
+    // 当搜索框清空时，重置所有状态并重新加载
+    pageNum.value = 1
+    noMore.value = false
+    agentList.value = []
+    getAgentList()
+  } else {
+    debouncedSearch()
+  }
+})
 
 async function getLoginUser() {
   const res = await request({
@@ -448,12 +487,25 @@ async function getMessageList() {
       aiSessionId: activeSession.value.id,
       pageSize: -1,
       column: 'createTime',
-      order: 'desc',
+      order: 'asc',
     },
   })
 
   messageList.value = result.records
 }
+
+const handleEditSession = () => {
+  console.log('before:', showSessionEdit.value)
+  showSessionEdit.value = true
+  console.log('after:', showSessionEdit.value)
+}
+
+const handleCancelEdit = () => {
+  console.log('before:', showSessionEdit.value)
+  showSessionEdit.value = false
+  console.log('after:', showSessionEdit.value)
+}
+
 async function handleDeleteSession(sessionId: string) {
   try {
     const result = await ElMessageBox.confirm('Are you sure you want to delete this session?', 'Warning', {
@@ -493,6 +545,30 @@ async function handleDeleteSession(sessionId: string) {
     // User cancelled deletion
   }
 }
+
+// 添加更新会话名称的方法
+const handleUpdateSession = async () => {
+  try {
+    await request({
+      url: BASE_URL + '/mgn/aiSession/edit',
+      method: 'POST',
+      headers: {
+        'X-Access-Token': token.value,
+      },
+      data: {
+        id: activeSession.value.id,
+        name: activeSession.value.name,
+      },
+    })
+
+    // 更新成功后关闭编辑模式
+    showSessionEdit.value = false
+    // 可选：刷新会话列表
+    getSessionList()
+  } catch (error) {
+    console.error('Update session failed:', error)
+  }
+}
 </script>
 <template>
   <!-- Outer page same width as window, center chat panel -->
@@ -500,13 +576,12 @@ async function handleDeleteSession(sessionId: string) {
     <!-- Entire chat panel -->
     <div class="chat-panel" v-loading="loading">
       <!-- 将联系人列表移到最左边 -->
-      <div class="contact-panel w-64 border-r border-gray-700 bg-[#141414] p-4 h-full">
+      <div class="contact-panel w-64 border-r border-gray-700 bg-[#1e1e1e] p-4 h-full">
         <!-- 添加LOGO部分 -->
         <div class="flex flex-col items-start gap-4 mb-6" @click="goHome">
           <img src="../../assets/logo1.gif" loading="lazy" class="w-10" alt="logo" />
         </div>
 
-        <!-- 我的Agent部分 -->
         <div class="text-white text-lg mb-4">My Agent</div>
         <div class="space-y-4 mb-6">
           <div v-if="myAgent" class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors duration-200" :class="{ 'bg-gray-700': selectAgentId === myAgent.id }" @click="handleSelectAgent(selectAgentId === myAgent.id ? null : myAgent)">
@@ -517,10 +592,20 @@ async function handleDeleteSession(sessionId: string) {
           </div>
         </div>
 
+        <!-- 搜索框和列表内容 -->
         <div class="text-white text-lg mb-4">Agent List</div>
+        <div class="mb-4">
+          <el-input v-model="searchQuery" placeholder="Search agents..." class="w-full" :prefix-icon="Search"></el-input>
+        </div>
         <div ref="contactListRef" class="h-[calc(80vh-80px)] overflow-y-auto custom-scrollbar" style="max-height: calc(90% - 120px)">
-          <div class="space-y-4">
-            <div v-for="agent in agentList" :key="agent.id" class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors duration-200" :class="{ 'bg-gray-700': selectAgentId === agent.id }" @click="handleSelectAgent(selectAgentId === agent.id ? null : agent)">
+          <div class="space-y-2">
+            <div
+              v-for="agent in agentList"
+              :key="agent.id"
+              class="flex items-center space-x-3 p-2 bg-[#1e1e1e] hover:bg-[#2c2c2c] rounded-lg cursor-pointer transition-colors duration-200"
+              :class="{ 'bg-[#2c2c2c]': selectAgentId === agent.id }"
+              @click="handleSelectAgent(selectAgentId === agent.id ? null : agent)"
+            >
               <el-avatar :size="40" :src="agent.avatar" />
               <div>
                 <div class="text-white text-sm">{{ agent.nickName }}</div>
@@ -554,12 +639,12 @@ async function handleDeleteSession(sessionId: string) {
         <div class="option-panel">
           <el-form size="small" v-if="myAgent && myAgent.id">
             <el-form-item label="RAG Knowledge">
-              <el-button class="ml-50" @click="showUploadEmbedding" type="primary">
+              <el-button class="ml-0" @click="showUploadEmbedding" type="primary">
                 <p style="color: white">Upload</p>
               </el-button>
             </el-form-item>
             <el-form-item label="Enable Knowledge Base">
-              <el-switch class="ml-43" v-model="options.enableVectorStore" style="--el-switch-on-color: #13ce66"></el-switch>
+              <el-switch class="ml-0" v-model="options.enableVectorStore" style="--el-switch-on-color: #13ce66"></el-switch>
             </el-form-item>
           </el-form>
         </div>
@@ -570,13 +655,17 @@ async function handleDeleteSession(sessionId: string) {
         <!-- Session name -->
         <div class="header" v-if="activeSession">
           <div class="front">
-            <!-- Show input box for editing when in edit mode -->
-            <div v-if="isEdit" class="title">
-              <!-- Press enter to confirm edit -->
-              <el-input v-model="activeSession.name" @keydown.enter="handleUpdateSession"></el-input>
+            <!-- 显示当前选中agent的信息 -->
+            <div class="flex items-center" style="display: inline-flex">
+              <el-avatar :size="30" :src="selectAgent.avatar" class="mr-3" />
+              <span class="text-white text-base">{{ selectAgent.nickName }}</span>
+              <!-- 编辑模式下显示输入框 -->
+              <div v-if="showSessionEdit" class="title ml-10">
+                <el-input v-model="activeSession.name" @keydown.enter="handleUpdateSession" @blur="handleUpdateSession"></el-input>
+              </div>
+              <!-- 非编辑模式下显示文本 -->
+              <div v-else class="title ml-10">{{ activeSession.name }}</div>
             </div>
-            <!-- Otherwise show normal title -->
-            <div v-else class="title">{{ activeSession.name }}</div>
             <!-- <div class="description">{{ activeSession.messages.length }} messages</div> -->
           </div>
           <!-- Edit buttons at end -->
@@ -584,11 +673,10 @@ async function handleDeleteSession(sessionId: string) {
             <el-icon :size="20" style="margin-right: 10px; color: white">
               <Delete @click="handleDeleteSession(activeSession.id)" />
             </el-icon>
-            <el-icon :size="20" style="color: white">
-              <!-- Show edit button when not in edit mode -->
-              <EditPen v-if="!isEdit" @click="isEdit = true" />
-              <!-- Show cancel edit button when in edit mode -->
-              <Close v-else @click="isEdit = false"></Close>
+
+            <el-icon :size="20" style="color: white" @click="handleEditSession">
+              <EditPen v-if="!isEdit" />
+              <Close v-else @click="handleCancelEdit" />
             </el-icon>
           </div>
         </div>
@@ -907,5 +995,44 @@ async function handleDeleteSession(sessionId: string) {
 // 可以添加选中状态的过渡效果
 .transition-colors {
   transition: background-color 0.2s ease;
+}
+
+:deep(.option-form) {
+  .el-form-item {
+    margin-bottom: 12px;
+
+    .el-form-item__label {
+      justify-content: flex-start;
+      padding-right: 8px;
+    }
+  }
+
+  .el-button {
+    margin-left: 0;
+  }
+
+  .el-switch {
+    margin-left: 0;
+  }
+}
+
+:deep(.el-input) {
+  .el-input__wrapper {
+    background-color: #1e1e1e !important;
+    background-color: #1e1e1e;
+    box-shadow: 0 0 0 1px #303133 inset;
+
+    &.is-focus {
+      box-shadow: 0 0 0 1px #409eff inset;
+    }
+  }
+
+  .el-input__inner {
+    color: white !important;
+
+    &::placeholder {
+      color: #606266;
+    }
+  }
 }
 </style>

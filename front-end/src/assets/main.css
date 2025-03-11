@@ -185,3 +185,18 @@ html.dark {
   padding: 0 20px;
   white-space: nowrap;
 }
+
+.el-input__inner {
+  -webkit-appearance: none;
+  background: none;
+  border: none;
+  box-sizing: border-box;
+  color: #f5f7fa;
+  flex-grow: 1;
+  font-size: inherit;
+  height: var(--el-input-inner-height);
+  line-height: var(--el-input-inner-height);
+  outline: none;
+  padding: 0;
+  width: 100%;
+}

@@ -21,8 +21,8 @@ const handleDeleteSession = () => {
     <div class="name">{{ session.name }}</div>
     <!-- Message count and last modified time -->
     <div class="count-time">
-      <div class="count">{{ session.messageSize ? session.messageSize : 0 }} messages</div>
-      <div class="time mr-50">{{ session.editedTime }}</div>
+      <div class="count">{{ session.messageCount }} messages</div>
+      <div class="time mr-50">{{ session.createdTime }}</div>
     </div>
     <!-- Show overlay on hover -->
     <div class="mask"></div>

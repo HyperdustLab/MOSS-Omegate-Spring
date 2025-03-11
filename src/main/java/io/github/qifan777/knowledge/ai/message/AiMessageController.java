@@ -11,7 +11,6 @@ import io.github.qifan777.knowledge.ai.message.dto.AiMessageWrapper;
 import io.github.qifan777.knowledge.ai.session.AiSessionRepository;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -36,6 +35,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -56,6 +56,8 @@ public class AiMessageController {
   private final AiSessionRepository sessionRepository;
 
   private final ResourceLoader resourceLoader;
+
+  private final JdbcTemplate jdbcTemplate;
 
   @DeleteMapping("history/{sessionId}")
   public void deleteHistory(@PathVariable String sessionId) {
@@ -138,21 +140,27 @@ public class AiMessageController {
       templateContent = IoUtil.read(inputStream, StandardCharsets.UTF_8);
     }
 
-    List<Message> chatMemoryList =
-        new ArrayList<>(chatMemory.get(aiMessageWrapper.getMessage().getSessionId(), 30));
+    //    List<Message> chatMemoryList =
+    //        new ArrayList<>(chatMemory.get(aiMessageWrapper.getMessage().getSessionId(), 30));
+    //
+    //    List<String> chatMemoryStrList =
+    //        chatMemoryList.stream()
+    //            .map(
+    //                i -> {
+    //                  String generated_text = i.getText();
+    //
+    //                  generated_text = generated_text.replaceAll("(?s)<think>.*?</think>", "");
+    //                  generated_text = generated_text.replaceAll("^\\n", "");
+    //
+    //                  return generated_text;
+    //                })
+    //            .toList();
 
     List<String> chatMemoryStrList =
-        chatMemoryList.stream()
-            .map(
-                i -> {
-                  String generated_text = i.getText();
-
-                  generated_text = generated_text.replaceAll("(?s)<think>.*?</think>", "");
-                  generated_text = generated_text.replaceAll("^\\n", "");
-
-                  return generated_text;
-                })
-            .toList();
+        jdbcTemplate.queryForList(
+            "select text_content from ai_message where ai_session_id = ? order by created_time asc",
+            String.class,
+            aiMessageWrapper.getMessage().getSessionId());
 
     String context = StrUtil.join("\n", chatMemoryStrList);
 
