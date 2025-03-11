@@ -574,55 +574,57 @@ const handleUpdateSession = async () => {
 }
 </script>
 <template>
-  <!-- Outer page same width as window, center chat panel -->
   <div class="home-view">
+    <!-- LOGO部分调整到最左边 -->
+    <div class="w-full flex items-start px-4 py-3 border-b border-gray-700" @click="goHome">
+      <img src="../../assets/logo1.gif" style="width: 60px; height: 80px" loading="lazy" class="cursor-pointer ml-[100px]" alt="logo" />
+    </div>
+
     <!-- Entire chat panel -->
     <div class="chat-panel" v-loading="loading">
       <!-- 将联系人列表移到最左边 -->
-      <div class="contact-panel w-64 border-r border-gray-700 bg-[#1e1e1e] p-4 h-full">
-        <!-- 添加LOGO部分 -->
-        <div class="flex flex-col items-start gap-4 mb-6" @click="goHome">
-          <img src="../../assets/logo1.gif" loading="lazy" class="w-10" alt="logo" />
-        </div>
-
-        <div class="text-white text-lg mb-4">My Agent</div>
-        <div class="space-y-4 mb-6">
-          <div v-if="myAgent" class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors duration-200" :class="{ 'bg-gray-700': selectAgentId === myAgent.id }" @click="handleSelectAgent(selectAgentId === myAgent.id ? null : myAgent)">
-            <el-avatar :size="40" :src="myAgent.avatar" />
-            <div>
-              <div class="text-white text-sm">{{ myAgent.nickName }}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 搜索框和列表内容 -->
-        <div class="text-white text-lg mb-4">Agent List</div>
-        <div class="mb-4">
-          <el-input v-model="searchQuery" placeholder="Search agents..." class="w-full" :prefix-icon="Search"></el-input>
-        </div>
-        <div ref="contactListRef" class="h-[calc(80vh-80px)] overflow-y-auto custom-scrollbar" style="max-height: calc(90% - 120px)">
-          <div class="space-y-2">
-            <div
-              v-for="agent in agentList"
-              :key="agent.id"
-              class="flex items-center space-x-3 p-2 bg-[#1e1e1e] hover:bg-[#2c2c2c] rounded-lg cursor-pointer transition-colors duration-200"
-              :class="{ 'bg-[#2c2c2c]': selectAgentId === agent.id }"
-              @click="handleSelectAgent(selectAgentId === agent.id ? null : agent)"
-            >
-              <el-avatar :size="40" :src="agent.avatar" />
+      <div class="contact-panel w-64 border-r border-gray-700 bg-[#1e1e1e] h-full">
+        <!-- 其他内容添加padding -->
+        <div class="p-4">
+          <div class="text-white text-lg mb-4">My Agent</div>
+          <div class="space-y-4 mb-6">
+            <div v-if="myAgent" class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors duration-200" :class="{ 'bg-gray-700': selectAgentId === myAgent.id }" @click="handleSelectAgent(selectAgentId === myAgent.id ? null : myAgent)">
+              <el-avatar :size="40" :src="myAgent.avatar" />
               <div>
-                <div class="text-white text-sm">{{ agent.nickName }}</div>
+                <div class="text-white text-sm">{{ myAgent.nickName }}</div>
               </div>
             </div>
+          </div>
 
-            <!-- Loading status -->
-            <div v-if="loading" class="text-center py-4 text-gray-400">Loading...</div>
+          <!-- 搜索框和列表内容 -->
+          <div class="text-white text-lg mb-4">Agent List</div>
+          <div class="mb-4">
+            <el-input v-model="searchQuery" placeholder="Search agents..." class="w-full" :prefix-icon="Search"></el-input>
+          </div>
+          <div ref="contactListRef" class="h-[calc(80vh-80px)] overflow-y-auto custom-scrollbar" style="max-height: calc(90% - 120px)">
+            <div class="space-y-2">
+              <div
+                v-for="agent in agentList"
+                :key="agent.id"
+                class="flex items-center space-x-3 p-2 bg-[#1e1e1e] hover:bg-[#2c2c2c] rounded-lg cursor-pointer transition-colors duration-200"
+                :class="{ 'bg-[#2c2c2c]': selectAgentId === agent.id }"
+                @click="handleSelectAgent(selectAgentId === agent.id ? null : agent)"
+              >
+                <el-avatar :size="40" :src="agent.avatar" />
+                <div>
+                  <div class="text-white text-sm">{{ agent.nickName }}</div>
+                </div>
+              </div>
 
-            <!-- No more data -->
-            <div v-if="noMore && agentList.length > 0" class="text-center py-4 text-gray-400">No more data</div>
+              <!-- Loading status -->
+              <div v-if="loading" class="text-center py-4 text-gray-400">Loading...</div>
 
-            <!-- No data -->
-            <div v-if="!loading && agentList.length === 0" class="text-center py-4 text-gray-400">No data</div>
+              <!-- No more data -->
+              <div v-if="noMore && agentList.length > 0" class="text-center py-4 text-gray-400">No more data</div>
+
+              <!-- No data -->
+              <div v-if="!loading && agentList.length === 0" class="text-center py-4 text-gray-400">No data</div>
+            </div>
           </div>
         </div>
       </div>
@@ -662,25 +664,29 @@ const handleUpdateSession = async () => {
             <div class="flex items-center" style="display: inline-flex">
               <el-avatar :size="30" :src="selectAgent.avatar" class="mr-3" />
               <span class="text-white text-base">{{ selectAgent.nickName }}</span>
+            </div>
+            <!-- <div class="description">{{ activeSession.messageCount }} messages</div> -->
+          </div>
+          <!-- Edit buttons at end -->
+          <div class="flex items-center">
+            <div class="rear">
+              <el-icon :size="20" style="margin-right: 10px; color: white">
+                <Delete @click="handleDeleteSession(activeSession.id)" />
+              </el-icon>
+
+              <el-icon :size="20" style="color: white" @click="handleEditSession">
+                <EditPen v-if="!isEdit" />
+                <Close v-else @click="handleCancelEdit" />
+              </el-icon>
+            </div>
+            <div class="front">
               <!-- 编辑模式下显示输入框 -->
-              <div v-if="showSessionEdit" class="title ml-10">
+              <div v-if="showSessionEdit" class="title flex-grow">
                 <el-input v-model="activeSession.name" @keydown.enter="handleUpdateSession" @blur="handleUpdateSession"></el-input>
               </div>
               <!-- 非编辑模式下显示文本 -->
-              <div v-else class="title ml-10">{{ activeSession.name }}</div>
+              <div v-else class="title flex-grow">{{ activeSession.name }}</div>
             </div>
-            <div class="description">{{ activeSession.messageCount }} messages</div>
-          </div>
-          <!-- Edit buttons at end -->
-          <div class="rear">
-            <el-icon :size="20" style="margin-right: 10px; color: white">
-              <Delete @click="handleDeleteSession(activeSession.id)" />
-            </el-icon>
-
-            <el-icon :size="20" style="color: white" @click="handleEditSession">
-              <EditPen v-if="!isEdit" />
-              <Close v-else @click="handleCancelEdit" />
-            </el-icon>
           </div>
         </div>
         <el-divider :border-style="'solid'" border-color="#666666" />
@@ -692,7 +698,8 @@ const handleUpdateSession = async () => {
         </div>
         <!-- Listen for send event -->
         <message-input @send="handleSendMessage" v-if="activeSession"></message-input>
-        <el-dropdown v-if="loginUser" class="bg-[#303133] rounded-full fixed top-2 right-25 h-7 w-40">
+
+        <el-dropdown v-if="loginUser" class="bg-[#303133] rounded-full fixed top-2 right-25 h-7 w-40 mt-20">
           <span class="el-dropdown-link mt-[-5px] flex items-center">
             <el-avatar :size="16" :src="loginUser.avatar" style="border: none" />
 
@@ -855,13 +862,15 @@ const handleUpdateSession = async () => {
   width: 100vw;
   height: 100vh;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   justify-content: center;
 
   .chat-panel {
+    margin: 0 auto;
+    width: 90%;
     display: flex;
     background-color: #1e1e1e;
-    width: 90%;
     height: 90%;
     box-shadow: 0 0 10px rgba(black, 0.1);
     border-radius: 10px;

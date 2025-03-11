@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { MdPreview } from 'md-editor-v3'
+import 'md-editor-v3/lib/preview.css'
 
 defineProps<{ message: string }>()
 </script>
 
 <template>
   <!--  markdown显示消息-->
-  <md-preview id="preview-only" :model-value="message" preview-theme="vuepress"></md-preview>
+  <md-preview id="preview-only" :model-value="message" preview-theme="vuepress" language="en-US" :show-code-row-numbers="true" :copy-code="true" copy-code-text="Copy" copy-code-success-text="Copied!"></md-preview>
 </template>
 
 <style scoped lang="scss">
