@@ -162,6 +162,17 @@ public class AiMessageController {
             String.class,
             aiMessageWrapper.getMessage().getSessionId());
 
+    chatMemoryStrList =
+        chatMemoryStrList.stream()
+            .map(
+                i -> {
+                  String generated_text = i;
+                  generated_text = generated_text.replaceAll("(?s)<think>.*?</think>", "");
+                  generated_text = generated_text.replaceAll("^\\n", "");
+                  return generated_text;
+                })
+            .toList();
+
     String context = StrUtil.join("\n", chatMemoryStrList);
 
     FilterExpressionBuilder b = new FilterExpressionBuilder();

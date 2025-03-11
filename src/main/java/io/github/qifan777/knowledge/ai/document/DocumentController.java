@@ -56,7 +56,7 @@ public class DocumentController {
 
     log.info("filterExpression: {}", exp);
 
-    SearchRequest searchRequest = SearchRequest.builder().filterExpression(exp).build();
+    SearchRequest searchRequest = SearchRequest.builder().topK(1000).filterExpression(exp).build();
 
     List<Document> documentList = vectorStore.similaritySearch(searchRequest);
 

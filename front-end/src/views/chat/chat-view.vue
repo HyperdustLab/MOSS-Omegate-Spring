@@ -364,6 +364,9 @@ async function getAgentList(isLoadMore = false) {
       agentList.value = [...agentList.value, ...result.records]
     } else {
       agentList.value = result.records
+      if (!myAgent.value) {
+        handleSelectAgent(result.records[0])
+      }
     }
 
     noMore.value = agentList.value.length >= total.value
@@ -436,7 +439,7 @@ function goUser() {
 }
 
 function showUploadEmbedding() {
-  uploadEmbeddingRef.value?.show()
+  uploadEmbeddingRef.value?.show(myAgent.value.id)
 }
 
 const fileList = ref<UploadUserFile[]>([])
@@ -666,7 +669,7 @@ const handleUpdateSession = async () => {
               <!-- 非编辑模式下显示文本 -->
               <div v-else class="title ml-10">{{ activeSession.name }}</div>
             </div>
-            <!-- <div class="description">{{ activeSession.messages.length }} messages</div> -->
+            <div class="description">{{ activeSession.messageCount }} messages</div>
           </div>
           <!-- Edit buttons at end -->
           <div class="rear">

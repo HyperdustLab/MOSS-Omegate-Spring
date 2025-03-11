@@ -42,6 +42,8 @@ const action = `${BASE_URL}/sys/common/ipfsUpload`
 
 const token = ref(localStorage.getItem('X-Token'))
 
+const myAgentId = ref('')
+
 const dialogVisible = ref(false)
 const fileList = ref<UploadUserFile[]>([])
 
@@ -118,8 +120,9 @@ const handleUpload = async () => {
   }
 }
 
-function show() {
+function show(agentId: string) {
   dialogVisible.value = true
+  myAgentId.value = agentId
   initFileList()
 }
 
@@ -133,6 +136,9 @@ async function initFileList() {
   const { result } = await request({
     url: `${BASE_URL}/mgn/agent/list`,
     method: 'GET',
+    params: {
+      id: myAgentId.value,
+    },
     headers: {
       'X-Access-Token': localStorage.getItem('X-Token') || '',
     },
