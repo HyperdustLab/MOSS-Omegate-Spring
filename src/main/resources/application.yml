@@ -2,7 +2,7 @@ spring:
   application:
     name: knowledge-base
   profiles:
-    active: dev
+    active: test
 
 server:
   port: 8080

@@ -39,7 +39,8 @@ public class DocumentController {
   @SneakyThrows
   @PostMapping("embedding")
   public Boolean embedding(
-      @RequestParam List<MultipartFile> files, @RequestParam(required = false) String userId) {
+      @RequestParam(required = false) List<MultipartFile> files,
+      @RequestParam(required = false) String userId) {
 
     try {
       userId = (String) StpUtil.getLoginId();

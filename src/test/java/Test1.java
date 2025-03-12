@@ -27,11 +27,14 @@ public class Test1 {
 
     FilterExpressionBuilder b = new FilterExpressionBuilder();
 
-    Expression exp = b.in("userId", "public").build();
+    Expression exp =
+        b.in("userId", "0x8576268b8299b0fff3c570d1b0c8e77b91d3d70cc1e72bd5bd98e74e8fc5d143")
+            .build();
 
     log.info("filterExpression: {}", exp);
 
-    SearchRequest searchRequest = SearchRequest.builder().topK(100).filterExpression(exp).build();
+    SearchRequest searchRequest =
+        SearchRequest.builder().query("MOSS的推特是多少").filterExpression(exp).build();
 
     List<Document> documentList = vectorStore.similaritySearch(searchRequest);
 

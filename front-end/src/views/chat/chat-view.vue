@@ -940,7 +940,7 @@ const handleUpdateSession = async () => {
         .front {
           .title {
             color: rgba(255, 255, 255, 0.7);
-            font-size: 20px;
+            font-size: 16px;
           }
 
           .description {
