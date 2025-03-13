@@ -11,6 +11,7 @@ import io.github.qifan777.knowledge.ai.message.dto.AiMessageWrapper;
 import io.github.qifan777.knowledge.ai.session.AiSessionRepository;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -140,38 +141,39 @@ public class AiMessageController {
       templateContent = IoUtil.read(inputStream, StandardCharsets.UTF_8);
     }
 
-    //    List<Message> chatMemoryList =
-    //        new ArrayList<>(chatMemory.get(aiMessageWrapper.getMessage().getSessionId(), 30));
-    //
-    //    List<String> chatMemoryStrList =
-    //        chatMemoryList.stream()
-    //            .map(
-    //                i -> {
-    //                  String generated_text = i.getText();
-    //
-    //                  generated_text = generated_text.replaceAll("(?s)<think>.*?</think>", "");
-    //                  generated_text = generated_text.replaceAll("^\\n", "");
-    //
-    //                  return generated_text;
-    //                })
-    //            .toList();
+    List<Message> chatMemoryList =
+        new ArrayList<>(chatMemory.get(aiMessageWrapper.getMessage().getSessionId(), 30));
 
     List<String> chatMemoryStrList =
-        jdbcTemplate.queryForList(
-            "select text_content from ai_message where ai_session_id = ? order by created_time asc",
-            String.class,
-            aiMessageWrapper.getMessage().getSessionId());
-
-    chatMemoryStrList =
-        chatMemoryStrList.stream()
+        chatMemoryList.stream()
             .map(
                 i -> {
-                  String generated_text = i;
+                  String generated_text = i.getText();
+
                   generated_text = generated_text.replaceAll("(?s)<think>.*?</think>", "");
                   generated_text = generated_text.replaceAll("^\\n", "");
+
                   return generated_text;
                 })
             .toList();
+
+    //    List<String> chatMemoryStrList =
+    //        jdbcTemplate.queryForList(
+    //            "select text_content from ai_message where ai_session_id = ? order by created_time
+    // asc",
+    //            String.class,
+    //            aiMessageWrapper.getMessage().getSessionId());
+    //
+    //    chatMemoryStrList =
+    //        chatMemoryStrList.stream()
+    //            .map(
+    //                i -> {
+    //                  String generated_text = i;
+    //                  generated_text = generated_text.replaceAll("(?s)<think>.*?</think>", "");
+    //                  generated_text = generated_text.replaceAll("^\\n", "");
+    //                  return generated_text;
+    //                })
+    //            .toList();
 
     String context = StrUtil.join("\n", chatMemoryStrList);
 
