@@ -10,6 +10,7 @@ import io.github.qifan777.knowledge.ai.agent.Agent;
 import java.util.List;
 import java.util.function.Function;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Description;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component;
 @Agent
 @Description(value = "Web3交易机器人，可以查询代币列表和当前代币价格")
 @AllArgsConstructor
+@Slf4j
 public class Web3Agent extends AbstractAgent implements Function<Web3Agent.Request, String> {
   private final String SYSTEM =
       """
@@ -72,6 +74,9 @@ public class Web3Agent extends AbstractAgent implements Function<Web3Agent.Reque
       String token = request.query; // 获取用户请求的代币名
       TokenData tokenData = getPriceForToken(token); // 获取代币相关数据
       if (tokenData == null) {
+
+        log.info("{}未找到该代币", token);
+
         return "未找到该代币";
       }
       // 格式化返回代币信息

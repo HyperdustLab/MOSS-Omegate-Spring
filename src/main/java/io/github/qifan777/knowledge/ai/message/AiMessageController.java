@@ -175,11 +175,12 @@ public class AiMessageController {
     //                })
     //            .toList();
 
-    String context = StrUtil.join("\n", chatMemoryStrList);
+    // String context = StrUtil.join("\n", chatMemoryStrList);
+    String context = "";
 
     FilterExpressionBuilder b = new FilterExpressionBuilder();
 
-    Expression exp = b.in("userId", userId, "public").build();
+    Expression exp = b.in("userId", userId).build();
 
     log.info("filterExpression: {}", exp);
 
@@ -193,7 +194,8 @@ public class AiMessageController {
 
     List<String> knowledgeBaseList = documentList.stream().map(Document::getText).toList();
 
-    String knowledge_base = StrUtil.join("\n", knowledgeBaseList);
+    // String knowledge_base = StrUtil.join("\n", knowledgeBaseList);
+    String knowledge_base = "";
 
     String user_input = aiMessageWrapper.getMessage().getTextContent();
 
@@ -201,7 +203,7 @@ public class AiMessageController {
 
     log.info("prompt: {}", prompt);
 
-    return ChatClient.create(chatModel).prompt(prompt).stream()
+    return ChatClient.create(chatModel).prompt(prompt).functions(functionBeanNames).stream()
         .chatResponse()
         .map(
             chatResponse ->

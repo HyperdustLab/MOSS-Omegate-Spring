@@ -270,7 +270,7 @@ const handleSessionCreate = async () => {
 
 const options = ref<AiMessageParams>({
   enableVectorStore: false,
-  enableAgent: false,
+  enableAgent: true,
 })
 const embeddingLoading = ref(false)
 
