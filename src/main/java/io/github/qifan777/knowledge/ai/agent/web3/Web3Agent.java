@@ -7,27 +7,37 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import io.github.qifan777.knowledge.ai.agent.AbstractAgent;
 import io.github.qifan777.knowledge.ai.agent.Agent;
+import io.github.qifan777.knowledge.ai.message.util.ChatModelFactory;
 import java.util.List;
 import java.util.function.Function;
-import lombok.AllArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Description;
 import org.springframework.stereotype.Component;
 
 @Agent
 @Description(value = "Web3交易机器人，可以查询代币列表和当前代币价格")
-@AllArgsConstructor
 public class Web3Agent extends AbstractAgent implements Function<Web3Agent.Request, String> {
   private final String SYSTEM =
       """
             你是一个Web3交易机器人，能够查询代币列表以及每个代币的当前价格。
             你可以回答关于Web3和代币相关的所有问题。
             """;
-  private final ChatModel chatModel;
+
+  @Value("${hyperAGI.api}")
+  private  String api;
 
   @Override
   public String apply(Request request) {
+
+    String resBody =
+        HttpRequest.get(api + "/sys/dict/getDictText/sys_config/qwen2_5:32b").execute().body();
+
+    String baseURL = new JSONObject(resBody).getStr("result");
+
+    ChatModel chatModel = ChatModelFactory.create(baseURL, "qwen2.5:32b");
+
     return ChatClient.create(chatModel)
         .prompt()
         .system(SYSTEM)

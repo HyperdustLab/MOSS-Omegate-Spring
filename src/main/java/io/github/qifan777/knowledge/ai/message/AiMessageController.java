@@ -8,10 +8,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.qifan777.knowledge.ai.agent.Agent;
 import io.github.qifan777.knowledge.ai.message.dto.AiMessageInput;
 import io.github.qifan777.knowledge.ai.message.dto.AiMessageWrapper;
+import io.github.qifan777.knowledge.ai.message.util.ChatModelFactory;
 import io.github.qifan777.knowledge.ai.session.AiSessionRepository;
+import io.micrometer.observation.ObservationRegistry;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -27,6 +30,12 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.model.Media;
+import org.springframework.ai.model.function.FunctionCallback;
+import org.springframework.ai.model.function.FunctionCallbackResolver;
+import org.springframework.ai.ollama.OllamaChatModel;
+import org.springframework.ai.ollama.api.OllamaApi;
+import org.springframework.ai.ollama.api.OllamaOptions;
+import org.springframework.ai.ollama.management.ModelManagementOptions;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter.Expression;
@@ -36,7 +45,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -48,17 +56,16 @@ import reactor.core.publisher.Flux;
 public class AiMessageController {
   private static String templateContent = null;
   private final AiMessageChatMemory chatMemory;
-  private final ChatModel chatModel;
+  // private final ChatModel chatModel;
   //  private final ImageModel imageModel;
   private final VectorStore vectorStore;
   private final ObjectMapper objectMapper;
   private final AiMessageRepository messageRepository;
   private final ApplicationContext applicationContext;
   private final AiSessionRepository sessionRepository;
-
   private final ResourceLoader resourceLoader;
-
-  private final JdbcTemplate jdbcTemplate;
+  private final FunctionCallbackResolver functionCallbackResolver;
+  private final ObservationRegistry observationRegistry;
 
   @DeleteMapping("history/{sessionId}")
   public void deleteHistory(@PathVariable String sessionId) {
@@ -101,6 +108,7 @@ public class AiMessageController {
   @SaIgnore
   public Flux<ServerSentEvent<String>> chat(
       @RequestParam String input, @RequestParam(required = false) String content) {
+
     AiMessageWrapper aiMessageWrapper = objectMapper.readValue(input, AiMessageWrapper.class);
 
     String userId = null;
@@ -143,6 +151,7 @@ public class AiMessageController {
 
     List<Message> chatMemoryList =
         new ArrayList<>(chatMemory.get(aiMessageWrapper.getMessage().getSessionId(), 30));
+    Collections.reverse(chatMemoryList);
 
     List<String> chatMemoryStrList =
         chatMemoryList.stream()
@@ -157,29 +166,19 @@ public class AiMessageController {
                 })
             .toList();
 
-    //    List<String> chatMemoryStrList =
-    //        jdbcTemplate.queryForList(
-    //            "select text_content from ai_message where ai_session_id = ? order by created_time
-    // asc",
-    //            String.class,
-    //            aiMessageWrapper.getMessage().getSessionId());
-    //
-    //    chatMemoryStrList =
-    //        chatMemoryStrList.stream()
-    //            .map(
-    //                i -> {
-    //                  String generated_text = i;
-    //                  generated_text = generated_text.replaceAll("(?s)<think>.*?</think>", "");
-    //                  generated_text = generated_text.replaceAll("^\\n", "");
-    //                  return generated_text;
-    //                })
-    //            .toList();
-
     String context = StrUtil.join("\n", chatMemoryStrList);
 
     FilterExpressionBuilder b = new FilterExpressionBuilder();
 
-    Expression exp = b.in("userId", userId, "public").build();
+    Expression exp = null;
+
+    if (aiMessageWrapper.getParams().getEnableAgent()) {
+      context = "";
+      b.eq("userId", userId).build();
+    } else {
+
+      b.in("userId", finalUserId, "public").build();
+    }
 
     log.info("filterExpression: {}", exp);
 
@@ -201,7 +200,11 @@ public class AiMessageController {
 
     log.info("prompt: {}", prompt);
 
-    return ChatClient.create(chatModel).prompt(prompt).stream()
+    ChatModel chatModel =
+        ChatModelFactory.create(
+            aiMessageWrapper.getParams().getBaseUrl(), aiMessageWrapper.getParams().getModel());
+
+    return ChatClient.create(chatModel).prompt(prompt).functions(functionBeanNames).stream()
         .chatResponse()
         .map(
             chatResponse ->

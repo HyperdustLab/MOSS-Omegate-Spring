@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { Position } from '@element-plus/icons-vue'
 import ImageUpload from '@/components/image/image-upload.vue'
 import { ElMessage } from 'element-plus'
@@ -7,9 +7,14 @@ type Message = {
   text: string
   image: string
 }
+const props = defineProps<{
+  functionStatus: string
+}>()
+
 // Send message event
 const emit = defineEmits<{
   send: [message: Message]
+  search: [message: boolean]
 }>()
 // Message in input box
 const message = ref<Message>({ text: '', image: '' })
@@ -22,6 +27,20 @@ const sendMessage = () => {
   // Clear after sending
   message.value = { text: '', image: '' }
 }
+
+const buttonActive = reactive({
+  search: false,
+  upload: false,
+})
+
+const searchToggleButton = () => {
+  buttonActive.search = !buttonActive.search
+  emit('search', buttonActive.search)
+}
+
+const uploadToggleButton = () => {
+  buttonActive.upload = !buttonActive.upload
+}
 </script>
 
 <template>
@@ -29,9 +48,15 @@ const sendMessage = () => {
     <div class="input-wrapper">
       <!-- Press enter to send, input box height is 3 lines -->
       <el-input v-model="message.text" :autosize="false" :rows="3" class="input" resize="none" type="textarea" @keydown.enter.prevent="sendMessage"> </el-input>
-      <div class="button-wrapper">
-        <image-upload class="image" :size="40" v-model="message.image" @click.prevent disabled></image-upload>
 
+      <div class="mt-10">
+        <div style="display: flex; align-items: center">
+          <el-button v-if="props.functionStatus === 'Y'" :style="{ backgroundColor: buttonActive.search ? '#909399' : '#2d2736', color: 'white', border: 'aliceblue' }" round @click="searchToggleButton" class="toggle-button">Web Search</el-button>
+
+          <el-button :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" icon="Plus" round disabled class="toggle-button">Upload</el-button>
+        </div>
+      </div>
+      <div class="button-wrapper">
         <el-button type="primary" @click="sendMessage">
           <el-icon class="el-icon--left">
             <Position />

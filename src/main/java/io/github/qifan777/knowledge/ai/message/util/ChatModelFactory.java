@@ -1,33 +1,39 @@
 package io.github.qifan777.knowledge.ai.message.util;
 
-import java.util.HashMap;
-import java.util.Map;
+import cn.hutool.extra.spring.SpringUtil;
+import io.micrometer.observation.ObservationRegistry;
+import java.util.ArrayList;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.model.function.FunctionCallback;
+import org.springframework.ai.model.function.FunctionCallbackResolver;
+import org.springframework.ai.ollama.OllamaChatModel;
+import org.springframework.ai.ollama.api.OllamaApi;
+import org.springframework.ai.ollama.api.OllamaOptions;
+import org.springframework.ai.ollama.management.ModelManagementOptions;
+import org.springframework.core.io.ResourceLoader;
 
-public class ChatModelMap {
-  // Create a ThreadLocal for storing ChatModel
-  private static final Map<String, ChatModel> chatModelHashMap = new HashMap<>();
+public class ChatModelFactory {
 
-  /**
-   * Set the ChatModel for the current thread.
-   *
-   * @param chatModel the ChatModel to set
-   */
-  public static void set(String key, ChatModel chatModel) {
-    chatModelHashMap.put(key, chatModel);
+  private static FunctionCallbackResolver functionCallbackResolver;
+  private static ObservationRegistry observationRegistry;
+
+  static {
+    functionCallbackResolver = SpringUtil.getBean(FunctionCallbackResolver.class);
+    observationRegistry = SpringUtil.getBean(ObservationRegistry.class);
   }
 
-  /**
-   * Get the ChatModel for the current thread.
-   *
-   * @return the ChatModel for the current thread, or null if not set
-   */
-  public static ChatModel get(String key) {
-    return chatModelHashMap.get(key);
-  }
+  public static ChatModel create(String baseUrl, String model) {
 
-  /** Remove the ChatModel from the current thread. */
-  public static void remove(String key) {
-    chatModelHashMap.remove(key);
+    ChatModel chatModel =
+        new OllamaChatModel(
+            new OllamaApi(baseUrl),
+            OllamaOptions.builder().model(model).build(),
+
+            functionCallbackResolver,
+            new ArrayList<FunctionCallback>(),
+            observationRegistry,
+            ModelManagementOptions.defaults());
+
+    return chatModel;
   }
 }

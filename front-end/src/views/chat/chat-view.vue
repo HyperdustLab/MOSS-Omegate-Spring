@@ -271,6 +271,8 @@ const handleSessionCreate = async () => {
 const options = ref<AiMessageParams>({
   enableVectorStore: false,
   enableAgent: false,
+  model: 'deepseek-r1:32b',
+  baseUrl: 'http://43.135.174.76:11434',
 })
 const embeddingLoading = ref(false)
 
@@ -477,6 +479,8 @@ const handleSelectAgent = (_agent) => {
   console.info('selectAgentId.value', selectAgentId.value)
 
   getSessionList()
+
+  handleSearchWeb(false)
 }
 
 async function getMessageList() {
@@ -571,6 +575,33 @@ const handleUpdateSession = async () => {
   } catch (error) {
     console.error('Update session failed:', error)
   }
+}
+
+async function handleSearchWeb(message: boolean) {
+  options.value.enableAgent = message
+  let key
+
+  if (message) {
+    options.value.enableAgent = true
+    key = 'qwen2_5:32b'
+    options.value.model = 'qwen2.5:32b'
+  } else {
+    options.value.enableAgent = false
+    key = 'deepseek-r1:32b'
+    options.value.model = 'deepseek-r1:32b'
+  }
+
+  const res = await request({
+    url: BASE_URL + `/sys/dict/getDictText/sys_config/${key}`,
+    method: 'GET',
+    headers: {
+      'X-Access-Token': token.value,
+    },
+  })
+
+  console.info('res.result', res.result)
+
+  options.value.baseUrl = res.result
 }
 </script>
 <template>
@@ -697,7 +728,7 @@ const handleUpdateSession = async () => {
           </transition-group>
         </div>
         <!-- Listen for send event -->
-        <message-input @send="handleSendMessage" v-if="activeSession"></message-input>
+        <message-input @send="handleSendMessage" @search="handleSearchWeb" :functionStatus="selectAgent.functionStatus" v-if="activeSession && selectAgent"></message-input>
 
         <el-dropdown v-if="loginUser" class="bg-[#303133] rounded-full fixed top-2 right-25 h-7 w-40 mt-20">
           <span class="el-dropdown-link mt-[-5px] flex items-center">
