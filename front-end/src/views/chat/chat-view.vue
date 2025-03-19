@@ -675,8 +675,8 @@ async function handleSearchWeb(message: boolean) {
         <div class="option-panel">
           <el-form size="small" v-if="myAgent && myAgent.id">
             <el-form-item label="RAG Knowledge">
-              <el-button class="ml-0" @click="showUploadEmbedding" type="primary">
-                <p style="color: white">Upload</p>
+              <el-button class="ml-0" :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" @click="showUploadEmbedding" icon="Plus">
+                <img style="width: 10px; height: 10px" src="../../assets/docUpload.svg" alt="upload" />
               </el-button>
             </el-form-item>
             <el-form-item label="Enable Knowledge Base">
