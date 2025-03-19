@@ -10,6 +10,7 @@ import io.github.qifan777.knowledge.ai.agent.Agent;
 import io.github.qifan777.knowledge.ai.message.util.ChatModelFactory;
 import java.util.List;
 import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +18,7 @@ import org.springframework.context.annotation.Description;
 import org.springframework.stereotype.Component;
 
 @Agent
+@Slf4j
 @Description(value = "Web3交易机器人，可以查询代币列表和当前代币价格")
 public class Web3Agent extends AbstractAgent implements Function<Web3Agent.Request, String> {
   private final String SYSTEM =
@@ -26,7 +28,7 @@ public class Web3Agent extends AbstractAgent implements Function<Web3Agent.Reque
             """;
 
   @Value("${hyperAGI.api}")
-  private  String api;
+  private String api;
 
   @Override
   public String apply(Request request) {
@@ -80,8 +82,12 @@ public class Web3Agent extends AbstractAgent implements Function<Web3Agent.Reque
     public String apply(Request request) {
       // 这里假设通过API查询某个代币的当前价格
       String token = request.query; // 获取用户请求的代币名
+
+      log.info("token:{}", token);
+
       TokenData tokenData = getPriceForToken(token); // 获取代币相关数据
       if (tokenData == null) {
+        log.error("token:{} not found", token);
         return "未找到该代币";
       }
       // 格式化返回代币信息

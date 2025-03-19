@@ -172,27 +172,29 @@ public class AiMessageController {
 
     Expression exp = null;
 
+    String knowledge_base = "";
+
     if (aiMessageWrapper.getParams().getEnableAgent()) {
       context = "";
-      b.eq("userId", userId).build();
+
     } else {
 
       b.in("userId", finalUserId, "public").build();
+
+      log.info("filterExpression: {}", exp);
+
+      SearchRequest searchRequest =
+          SearchRequest.builder()
+              .filterExpression(exp)
+              .query(aiMessageWrapper.getMessage().getTextContent())
+              .build();
+
+      List<Document> documentList = vectorStore.similaritySearch(searchRequest);
+
+      List<String> knowledgeBaseList = documentList.stream().map(Document::getText).toList();
+
+      knowledge_base = StrUtil.join("\n", knowledgeBaseList);
     }
-
-    log.info("filterExpression: {}", exp);
-
-    SearchRequest searchRequest =
-        SearchRequest.builder()
-            .filterExpression(exp)
-            .query(aiMessageWrapper.getMessage().getTextContent())
-            .build();
-
-    List<Document> documentList = vectorStore.similaritySearch(searchRequest);
-
-    List<String> knowledgeBaseList = documentList.stream().map(Document::getText).toList();
-
-    String knowledge_base = StrUtil.join("\n", knowledgeBaseList);
 
     String user_input = aiMessageWrapper.getMessage().getTextContent();
 
