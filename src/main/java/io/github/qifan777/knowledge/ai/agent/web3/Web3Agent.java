@@ -57,7 +57,7 @@ public class Web3Agent extends AbstractAgent implements Function<Web3Agent.Reque
       @JsonProperty(required = true) @JsonPropertyDescription(value = "用户原始的提问") String query) {}
 
   @Component
-  @Description("查询多个代币的当前价格、市场总值、24小时交易量和24小时变化，返回每个代币的详细信息")
+  @Description("查询指定代币的当前价格、市场总值、24小时交易量和24小时变化")
   public static class TokenPrice implements Function<TokenPrice.Request, String> {
 
     @Autowired private JdbcTemplate jdbcTemplate;
