@@ -607,12 +607,12 @@ async function handleSearchWeb(message: boolean) {
 <template>
   <div class="home-view">
     <!-- LOGO部分调整到最左边 -->
-    <div class="w-full flex items-start px-4 py-3 border-b border-gray-700" @click="goHome">
+    <div class="w-full flex items-start px-4 py-3 border-b border-gray-700 fixed top-0 left-0 z-10" @click="goHome">
       <img src="../../assets/logo1.gif" style="width: 60px; height: 80px" loading="lazy" class="cursor-pointer ml-[100px]" alt="logo" />
     </div>
 
     <!-- Entire chat panel -->
-    <div class="chat-panel" v-loading="loading">
+    <div class="chat-panel" style="margin-top: 100px" v-loading="loading">
       <!-- 将联系人列表移到最左边 -->
       <div class="contact-panel w-64 border-r border-gray-700 bg-[#1e1e1e] h-full">
         <!-- 其他内容添加padding -->
@@ -674,9 +674,9 @@ async function handleSearchWeb(message: boolean) {
 
         <div class="option-panel">
           <el-form size="small" v-if="myAgent && myAgent.id">
-            <el-form-item label="RAG Knowledge">
-              <el-button class="ml-0" :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" @click="showUploadEmbedding" icon="Plus">
-                <img style="width: 10px; height: 10px" src="../../assets/docUpload.svg" alt="upload" />
+            <el-form-item label-width="8.2rem" label="RAG Knowledge">
+              <el-button class="ml-0" :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" @click="showUploadEmbedding">
+                <img style="width: 15px; height: 15px" src="../../assets/docUpload.svg" alt="upload" />
               </el-button>
             </el-form-item>
             <el-form-item label="Enable Knowledge Base">
@@ -730,7 +730,7 @@ async function handleSearchWeb(message: boolean) {
         <!-- Listen for send event -->
         <message-input @send="handleSendMessage" @search="handleSearchWeb" :functionStatus="selectAgent.functionStatus" v-if="activeSession && selectAgent"></message-input>
 
-        <el-dropdown v-if="loginUser" class="bg-[#303133] rounded-full fixed top-2 right-25 h-7 w-40 mt-20">
+        <el-dropdown v-if="loginUser" class="bg-[#303133] rounded-full fixed top-2 right-25 h-7 w-40 mt-20 z-50">
           <span class="el-dropdown-link mt-[-5px] flex items-center">
             <el-avatar :size="16" :src="loginUser.avatar" style="border: none" />
 
