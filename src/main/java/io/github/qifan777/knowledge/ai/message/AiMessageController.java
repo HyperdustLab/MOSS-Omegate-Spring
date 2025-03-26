@@ -30,12 +30,7 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.model.Media;
-import org.springframework.ai.model.function.FunctionCallback;
 import org.springframework.ai.model.function.FunctionCallbackResolver;
-import org.springframework.ai.ollama.OllamaChatModel;
-import org.springframework.ai.ollama.api.OllamaApi;
-import org.springframework.ai.ollama.api.OllamaOptions;
-import org.springframework.ai.ollama.management.ModelManagementOptions;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter.Expression;
@@ -179,7 +174,7 @@ public class AiMessageController {
 
     } else {
 
-      b.in("userId", finalUserId, "public").build();
+      exp = b.in("userId", finalUserId, "public").build();
 
       log.info("filterExpression: {}", exp);
 
