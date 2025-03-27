@@ -141,7 +141,7 @@ public class OllamaApi {
     String collect =
         chatRequest.messages.stream().map(Message::content).collect(Collectors.joining("\n"));
 
-//    log.info("Streaming chat request:{} ", collect);
+    log.info("Streaming chat request:{} ", collect);
 
     AtomicBoolean isInsideTool = new AtomicBoolean(false);
 

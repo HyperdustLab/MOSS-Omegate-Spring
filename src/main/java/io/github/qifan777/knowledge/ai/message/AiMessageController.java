@@ -4,6 +4,7 @@ import cn.dev33.satoken.annotation.SaIgnore;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.qifan777.knowledge.ai.agent.Agent;
 import io.github.qifan777.knowledge.ai.message.dto.AiMessageInput;
@@ -200,6 +201,9 @@ public class AiMessageController {
     ChatModel chatModel =
         ChatModelFactory.create(
             aiMessageWrapper.getParams().getBaseUrl(), aiMessageWrapper.getParams().getModel());
+
+    log.info("chatModel: {}", JSONUtil.toJsonStr(chatModel));
+    log.info("ip: {}", aiMessageWrapper.getParams().getBaseUrl());
 
     return ChatClient.create(chatModel).prompt(prompt).functions(functionBeanNames).stream()
         .chatResponse()

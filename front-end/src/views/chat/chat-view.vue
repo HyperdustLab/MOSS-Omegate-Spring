@@ -200,6 +200,21 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
 
   form.set('content', content)
 
+  options.value.model = options.value.enableAgent ? 'qwen2.5:32b' : 'deepseek-r1:32b'
+
+  const res = await request({
+    url: BASE_URL + `/mgn/nodePort/getNodePort`,
+    method: 'GET',
+    params: { serviceName: options.value.model },
+    headers: {
+      'X-Access-Token': token.value,
+    },
+  })
+
+  console.info('res.result', res.result)
+
+  options.value.baseUrl = `http://${res.result.ip}:${res.result.port}`
+
   const body: AiMessageWrapper = { message: chatMessage, params: options.value }
 
   form.set('input', JSON.stringify(body))
@@ -271,8 +286,8 @@ const handleSessionCreate = async () => {
 const options = ref<AiMessageParams>({
   enableVectorStore: false,
   enableAgent: false,
-  model: 'deepseek-r1:32b',
-  baseUrl: 'http://43.135.174.76:11434',
+  model: '',
+  baseUrl: '',
 })
 const embeddingLoading = ref(false)
 
@@ -579,29 +594,6 @@ const handleUpdateSession = async () => {
 
 async function handleSearchWeb(message: boolean) {
   options.value.enableAgent = message
-  let key
-
-  if (message) {
-    options.value.enableAgent = true
-    key = 'qwen2_5:32b'
-    options.value.model = 'qwen2.5:32b'
-  } else {
-    options.value.enableAgent = false
-    key = 'deepseek-r1:32b'
-    options.value.model = 'deepseek-r1:32b'
-  }
-
-  const res = await request({
-    url: BASE_URL + `/sys/dict/getDictText/sys_config/${key}`,
-    method: 'GET',
-    headers: {
-      'X-Access-Token': token.value,
-    },
-  })
-
-  console.info('res.result', res.result)
-
-  options.value.baseUrl = res.result
 }
 </script>
 <template>
