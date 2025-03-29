@@ -80,18 +80,19 @@ const noMore = ref(false)
 const selectAgent = ref(null)
 const selectAgentId = ref(null)
 
+const currSessionId = ref(generateUUID())
+
 // 添加搜索相关的响应式变量
 const searchQuery = ref('')
 
 onMounted(async () => {
-  if (!localStorage.getItem('X-Token')) {
-    loginRef.value.show()
-  } else {
+  await getAgentList()
+
+  if (localStorage.getItem('X-Token')) {
     await getLoginUser()
 
     await getAgent()
-
-    await getAgentList()
+    // loginRef.value.show()
   }
 
   // 添加滚动监听
@@ -112,6 +113,17 @@ const responseMessage = ref<AiMessage>({
   sessionId: '',
 })
 
+function generateUUID() {
+  const bytes = new Uint8Array(16)
+  window.crypto.getRandomValues(bytes)
+
+  bytes[6] = (bytes[6] & 0x0f) | 0x40 // Set the version to 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80 // Set the variant to 10xx
+
+  const uuid = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+  return `${uuid.slice(0, 8)}-${uuid.slice(8, 12)}-${uuid.slice(12, 16)}-${uuid.slice(16, 20)}-${uuid.slice(20)}`
+}
+
 async function getSessionList() {
   const { result } = await request({
     url: BASE_URL + '/mgn/aiSession/list',
@@ -125,7 +137,7 @@ async function getSessionList() {
       pageSize: 10,
       column: 'createdTime',
       order: 'desc',
-      creatorId: loginUser.value.id,
+      creatorId: loginUser.value?.id || currSessionId.value,
       agentId: selectAgent.value.sid,
     },
   })
@@ -162,10 +174,10 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
     medias,
     textContent: message.text,
     type: 'USER',
-    avatar: loginUser.value.avatar,
-    name: loginUser.value.walletAddress,
-    creatorId: loginUser.value.id,
-    editorId: loginUser.value.id,
+    avatar: loginUser.value?.avatar,
+    name: loginUser.value?.walletAddress || 'Gu',
+    creatorId: loginUser.value?.id || currSessionId.value,
+    editorId: loginUser.value?.id || currSessionId.value,
   }
 
   responseMessage.value = {
@@ -244,6 +256,17 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
 
       await saveMessage(chatMessage)
       await saveMessage(responseMessage.value)
+
+      await addReasoningRecord({
+        inputContent: chatMessage.textContent,
+        outContent: responseMessage.value.textContent,
+        agentId: selectAgent.value.sid,
+        userId: loginUser.value?.id || '',
+        serviceName: options.value.model,
+        systemContent: content,
+        remark: options.value.baseUrl,
+        nodeId: res.result.minerNodeId,
+      })
     }
   })
 
@@ -254,6 +277,17 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
   messageList.value.push(...[chatMessage, responseMessage.value])
   await nextTick(() => {
     messageListRef.value?.scrollTo(0, messageListRef.value.scrollHeight)
+  })
+}
+
+async function addReasoningRecord(reasoningRecord) {
+  await request({
+    url: BASE_URL + '/mgn/reasoningRecord/add',
+    method: 'POST',
+    data: reasoningRecord,
+    headers: {
+      'X-Access-Token': token.value,
+    },
   })
 }
 
@@ -275,6 +309,7 @@ const handleSessionCreate = async () => {
     data: {
       agentId: selectAgent.value.sid,
       name: 'New Chat',
+      creatorId: currSessionId.value,
     },
     headers: {
       'X-Access-Token': token.value,
@@ -595,6 +630,10 @@ const handleUpdateSession = async () => {
 async function handleSearchWeb(message: boolean) {
   options.value.enableAgent = message
 }
+
+function handleLogin() {
+  loginRef.value.show()
+}
 </script>
 <template>
   <div class="home-view">
@@ -656,7 +695,7 @@ async function handleSearchWeb(message: boolean) {
       <div class="session-panel w-64 border-r border-gray-700 bg-[#141414] p-4 h-full">
         <div class="button-wrapper mt-20">
           <div class="create-session-btn cursor-pointer flex flex-col items-center justify-center px-4 py-2 text-sm hover:bg-gray-700 rounded" @click="handleSessionCreate">
-            <img style="width: 30px" src="../../assets/create.png" class="create-icon" />
+            <img style="width: 30px" src="../../assets/create.png" alt="create" class="create-icon" />
           </div>
         </div>
 
@@ -716,7 +755,7 @@ async function handleSearchWeb(message: boolean) {
         <div ref="messageListRef" class="message-list">
           <!-- Transition effect -->
           <transition-group name="list" v-if="activeSession && agent">
-            <message-row v-for="message in messageList" :agent-avatar="message.avatar" :avatar="loginUser.avatar || user" :key="message.id" :message="message"></message-row>
+            <message-row v-for="message in messageList" :agent-avatar="message.avatar" :avatar="loginUser ? loginUser.avatar : user" :key="message.id" :message="message"></message-row>
           </transition-group>
         </div>
         <!-- Listen for send event -->
@@ -762,6 +801,11 @@ async function handleSearchWeb(message: boolean) {
             </el-card>
           </template>
         </el-dropdown>
+        <div v-else class="bg-[#303133] rounded-full fixed top-2 text-white right-25 h-7 w-40 mt-20 z-50 flex items-center justify-center cursor-pointer" @click="handleLogin">
+          <el-avatar :size="16" :src="user" style="border: none" />
+          <span class="ml-1.25 text-white"> Guest </span>
+        </div>
+
         <Login ref="loginRef" />
 
         <UploadEmbedding ref="uploadEmbeddingRef"></UploadEmbedding>
