@@ -124,6 +124,17 @@ function generateUUID() {
   return `${uuid.slice(0, 8)}-${uuid.slice(8, 12)}-${uuid.slice(12, 16)}-${uuid.slice(16, 20)}-${uuid.slice(20)}`
 }
 
+function handleCreateMyAgent() {
+  window.open('https://www.aipod.fun/create-new-agent')
+}
+
+async function handleShareTwitter() {
+  const currentUrl = window.location.href
+  const shareText = `check out moss AI agent`
+  const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(currentUrl)}`
+  window.open(twitterShareUrl, '_blank')
+}
+
 async function getSessionList() {
   const { result } = await request({
     url: BASE_URL + '/mgn/aiSession/list',
@@ -241,11 +252,23 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
     payload: form as any,
     method: 'POST',
   })
+
+  let isThinking = true
+  let buffer = ''
+
   evtSource.addEventListener('message', async (event: any) => {
     const response = JSON.parse(event.data) as ChatResponse
     const finishReason = response.result.metadata.finishReason
     if (response.result.output.content) {
-      responseMessage.value.textContent += response.result.output.content
+      if (isThinking) {
+        buffer = response.result.output.content
+        if (buffer.indexOf('</think>') > -1) {
+          isThinking = false
+        }
+      } else {
+        responseMessage.value.textContent += response.result.output.content
+      }
+
       // Scroll to bottom
       await nextTick(() => {
         messageListRef.value?.scrollTo(0, messageListRef.value.scrollHeight)
@@ -494,6 +517,22 @@ function showUploadEmbedding() {
   uploadEmbeddingRef.value?.show(myAgent.value.id)
 }
 
+const handleBindTwitter = () => {
+  const data = {
+    token: token.value,
+    id: myAgent.value.sid,
+    type: '1',
+  }
+
+  const encodedData = btoa(JSON.stringify(data))
+
+  window.removeEventListener('message', handleMessage, false)
+
+  window.addEventListener('message', handleMessage, false)
+
+  window.open(BASE_URL + '/mgn/x/render?data=' + encodedData, 'googleLogin', 'width=500,height=600')
+}
+
 const fileList = ref<UploadUserFile[]>([])
 
 // 添加滚动加载方法
@@ -603,6 +642,34 @@ async function handleDeleteSession(sessionId: string) {
   }
 }
 
+function handleMessage(event: any) {
+  // 你可以根据 event.origin 判断消息的来源是否是你信任的源
+  // 例如: if (event.origin !== "https://your-trusted-domain.com") return;
+
+  // 接收父窗口传递的数据
+  var receivedData = event.data
+
+  console.info(BASE_URL)
+  console.info(event.origin)
+  console.info('receivedData:', receivedData)
+  // 判断receivedData是否为JSON字符串
+  let isJsonString = false
+  try {
+    const json = JSON.parse(receivedData)
+
+    if (json.action === 'bindXSuccess') {
+      ElMessage({
+        type: 'success',
+        message: 'Bind X successfully',
+        customClass: 'dark-message',
+      })
+      location.reload()
+    }
+  } catch (e) {
+    isJsonString = false
+  }
+}
+
 // 添加更新会话名称的方法
 const handleUpdateSession = async () => {
   try {
@@ -656,6 +723,12 @@ function handleLogin() {
                 <div class="text-white text-sm">{{ myAgent.nickName }}</div>
               </div>
             </div>
+
+            <div v-else>
+              <div class="flex items-center justify-center p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors duration-200">
+                <el-button @click="handleCreateMyAgent" round type="primary" class="w-full">Create My Agent</el-button>
+              </div>
+            </div>
           </div>
 
           <!-- 搜索框和列表内容 -->
@@ -704,14 +777,19 @@ function handleLogin() {
         </div>
 
         <div class="option-panel">
-          <el-form size="small" v-if="myAgent && myAgent.id">
-            <el-form-item label-width="8.2rem" label="RAG Knowledge">
+          <el-form size="small" v-if="myAgent && myAgent.id === selectAgentId" class="rag-form">
+            <el-form-item label-width="8.2rem" label="RAG Knowledge" class="form-item-align">
               <el-button class="ml-0" :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" @click="showUploadEmbedding">
                 <img style="width: 15px; height: 15px" src="../../assets/docUpload.svg" alt="upload" />
               </el-button>
             </el-form-item>
-            <el-form-item label="Enable Knowledge Base">
+            <el-form-item label="Enable Knowledge Base" class="form-item-align">
               <el-switch class="ml-0" v-model="options.enableVectorStore" style="--el-switch-on-color: #13ce66"></el-switch>
+            </el-form-item>
+            <el-form-item v-if="!myAgent || !myAgent.xname" label="Bind X" class="form-item-align">
+              <el-button class="ml-0" :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" @click="handleBindTwitter">
+                <img style="width: 15px; height: 15px" src="../../assets/bind.svg" alt="upload" />
+              </el-button>
             </el-form-item>
           </el-form>
         </div>
@@ -723,11 +801,26 @@ function handleLogin() {
         <div class="header" v-if="activeSession">
           <div class="front">
             <!-- 显示当前选中agent的信息 -->
-            <div class="flex items-center" style="display: inline-flex">
-              <el-avatar :size="30" :src="selectAgent.avatar" class="mr-3" />
-              <span class="text-white text-base">{{ selectAgent.nickName }}</span>
+            <div class="flex flex-col">
+              <div class="flex items-center">
+                <el-avatar :size="30" :src="selectAgent.avatar" class="mr-3" />
+                <div class="flex flex-col ml-10">
+                  <div class="flex items-center">
+                    <span class="text-white text-base">{{ selectAgent.nickName }}</span>
+                  </div>
+
+                  <div v-if="selectAgent.xname" class="mt-2">
+                    <span class="text-gray-400 text-sm"> (@{{ selectAgent.xname }}) </span>
+                    <el-link class="ml-10" @click="handleShareTwitter">
+                      <div class="flex items-center">
+                        <img src="../../assets/x.svg" alt="X" style="width: 14px; height: 14px; margin-right: 4px" />
+                        Share
+                      </div>
+                    </el-link>
+                  </div>
+                </div>
+              </div>
             </div>
-            <!-- <div class="description">{{ activeSession.messageCount }} messages</div> -->
           </div>
           <!-- Edit buttons at end -->
           <div class="flex items-center">
@@ -1111,6 +1204,23 @@ function handleLogin() {
 
     &::placeholder {
       color: #606266;
+    }
+  }
+}
+
+.rag-form {
+  :deep(.form-item-align) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .el-form-item__label {
+      justify-content: flex-start;
+    }
+
+    .el-form-item__content {
+      margin-left: auto !important;
+      justify-content: flex-end;
     }
   }
 }

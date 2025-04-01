@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="dialogVisible" fullscreen title="Login" width="45%" :close-on-click-modal="false" :close-on-press-escape="false" :show-close="false" :modal="true" :modal-append-to-body="true" modal-class="modal-mask" :lock-scroll="true" :append-to-body="true">
+  <el-dialog v-model="dialogVisible" fullscreen title="Login" width="45%" :close-on-click-modal="false" :close-on-press-escape="false" :modal="true" :modal-append-to-body="true" modal-class="modal-mask" :lock-scroll="true" :append-to-body="true">
     <div>
       <!-- component -->
       <div class="w-70% relative py-11 bg-black h-180 flex items-center justify-center" style="margin-left: 15%">
