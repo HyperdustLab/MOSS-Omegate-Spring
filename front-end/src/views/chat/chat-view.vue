@@ -846,12 +846,15 @@ async function unbindX() {
                     <span class="text-white text-base">{{ selectAgent.nickName }}</span>
                   </div>
 
-                  <div v-if="selectAgent.xname" class="mt-2 flex items-center">
-                    <span class="text-gray-400 text-sm flex items-center"> <img src="../../assets/x.svg" alt="X" style="width: 14px; height: 14px; margin-right: 4px" /> (@{{ selectAgent.xusername }}) </span>
-                    <el-link class="ml-4" @click="handleShareTwitter">
-                      <div class="flex items-center">
-                        <el-icon size="20"><Share /></el-icon>
-                      </div>
+                  <div v-if="selectAgent.xname" class="mt-3 flex items-start rounded-lg transition-all duration-300 hover:bg-gray-700/10">
+                    <span class="text-gray-300 text-sm flex items-center group text-left">
+                      <img src="../../assets/x.svg" alt="X" class="w-4 h-4 mr-2 transition-transform duration-300 group-hover:scale-110 flex-shrink-0" />
+                      <span class="font-medium truncate">@{{ selectAgent.xusername }}</span>
+                    </span>
+                    <el-link class="flex items-center transition-all duration-300 hover:scale-105 ml-5 mt-2" @click="handleShareTwitter" :underline="false">
+                      <el-icon size="18" class="text-blue-400 hover:text-blue-300 transition-colors duration-300">
+                        <Share />
+                      </el-icon>
                     </el-link>
                   </div>
                 </div>
@@ -945,16 +948,15 @@ async function unbindX() {
 <style lang="scss" scoped>
 :deep .el-card {
   --el-card-border-color: #303133;
-  --el-card-border-radius: 12px;
+  --el-card-border-radius: 4px;
   --el-card-padding: 20px;
-  --el-card-bg-color: rgba(48, 49, 51, 0.95);
+  --el-card-bg-color: var(--el-fill-color-blank);
   background-color: var(--el-card-bg-color);
   border: 1px solid var(--el-card-border-color);
   border-radius: var(--el-card-border-radius);
   color: var(--el-text-color-primary);
   overflow: hidden;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
+  transition: var(--el-transition-duration);
 }
 
 :deep .el-input-group__append {
@@ -1035,38 +1037,24 @@ async function unbindX() {
 }
 
 .loading-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  color: rgba(255, 255, 255, 0.7);
-
-  &::after {
-    content: '';
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
+  text-align: center;
+  padding: 10px;
+  font-size: 16px;
+  color: white;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+:deep(.el-divider--horizontal) {
+  border-top: 1px solid #282c34;
+  display: block;
+  height: 1px;
+  margin: 24px 0;
+  width: 100%;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+:deep(.el-form-item--small .el-form-item__label) {
+  height: 24px;
+  line-height: 24px;
+  color: white;
 }
 
 .home-view {
@@ -1077,120 +1065,189 @@ async function unbindX() {
   align-items: stretch;
   justify-content: center;
   overflow: hidden;
-  background: linear-gradient(to bottom right, #141414, #1e1e1e);
 
   .chat-panel {
     margin: 0 auto;
     width: 90%;
     display: flex;
-    background: linear-gradient(to right, #1a1a1a, #2d2d2d);
+    background-color: #1e1e1e;
     height: 90vh;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-    border-radius: 16px;
+    box-shadow: 0 0 10px rgba(black, 0.1);
+    border-radius: 10px;
     overflow: hidden;
-    transition: all 0.3s ease;
-
-    .contact-panel {
-      background: rgba(30, 30, 30, 0.95);
-      backdrop-filter: blur(10px);
-      border-right: 1px solid rgba(255, 255, 255, 0.05);
-      transition: all 0.3s ease;
-
-      .agent-item {
-        transition: all 0.3s ease;
-
-        &:hover {
-          transform: translateX(5px);
-          background: rgba(255, 255, 255, 0.05);
-        }
-      }
-    }
 
     .session-panel {
-      background: rgba(20, 20, 20, 0.95);
-      backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      padding: 20px;
+      position: relative;
+      border-right: 1px solid rgba(255, 255, 255, 0.07);
+      background-color: #141414;
+      height: 100%;
+      overflow: hidden;
+      /* Title */
+      .title {
+        margin-top: 20px;
+        font-size: 20px;
+        color: #ffffff;
+      }
 
-      .session-item {
-        transition: all 0.3s ease;
+      .session-list {
+        overflow-y: scroll;
+        margin: 20px 0;
+        flex: 1;
 
-        &:hover {
-          transform: translateX(5px);
-          background: rgba(255, 255, 255, 0.05);
+        .session {
+          /* Space between sessions */
+          margin-top: 20px;
+        }
+
+        .session:first-child {
+          margin-top: 0;
+        }
+      }
+
+      .button-wrapper {
+        /* entity-panel is relative layout, button-wrapper is absolute relative to it */
+        bottom: 20px;
+        left: 0;
+        display: flex;
+        /* Show buttons on right */
+        justify-content: flex-end;
+        /* Same width as session-panel */
+        width: 100%;
+
+        /* Leave space between button and right edge */
+        .new-session {
+          margin-right: 20px;
         }
       }
     }
 
+    /* Right message history panel */
     .message-panel {
-      padding: 1.5rem;
-
-      .message-list {
-        gap: 1rem;
-
-        .message-row {
-          animation: fadeIn 0.3s ease;
-        }
-      }
+      width: calc(100% - 500px);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
 
       .header {
-        background: rgba(30, 30, 30, 0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 12px;
-        padding: 1rem;
-        margin-bottom: 1rem;
+        padding: 20px 20px 0 20px;
+        display: flex;
+        /* Session name and edit button distributed left and right horizontally */
+        justify-content: space-between;
+
+        /* Front title and message count */
+        .front {
+          .title {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 16px;
+          }
+
+          .description {
+            margin-top: 10px;
+            color: rgba(255, 255, 255, 0.5);
+          }
+        }
+
+        /* Edit and cancel edit buttons at end */
+        .rear {
+          display: flex;
+          align-items: center;
+        }
+      }
+
+      .message-list {
+        padding: 15px;
+        width: 100%;
+        flex: 1;
+        box-sizing: border-box;
+        // Scroll overflow when too many messages
+        overflow-y: scroll;
+        // Transition effect when switching chat sessions
+        .list-enter-active,
+        .list-leave-active {
+          transition: all 0.5s ease;
+        }
+
+        .list-enter-from,
+        .list-leave-to {
+          opacity: 0;
+          transform: translateX(30px);
+        }
+      }
+    }
+
+    // Options panel
+    .option-panel {
+      width: 100%;
+      padding: 20px;
+      border-left: 1px solid rgba(black, 0.07);
+
+      .upload {
+        width: 160px;
       }
     }
   }
 }
 
-// 自定义滚动条
+// 修改滚动条样式
 .custom-scrollbar {
   &::-webkit-scrollbar {
-    width: 6px;
+    width: 0; // 将宽度设为0来隐藏滚动条
+    display: none; // 完全隐藏滚动条
   }
 
-  &::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-  }
+  // 添加 Firefox 的滚动条隐藏
+  scrollbar-width: none;
 
-  &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
+  // 添加 IE 的滚动条隐藏
+  -ms-overflow-style: none;
+}
 
-    &:hover {
-      background: rgba(255, 255, 255, 0.2);
+// 可以添加选中状态的过渡效果
+.transition-colors {
+  transition: background-color 0.2s ease;
+}
+
+:deep(.option-form) {
+  .el-form-item {
+    margin-bottom: 12px;
+
+    .el-form-item__label {
+      justify-content: flex-start;
+      padding-right: 8px;
     }
   }
-}
 
-// 按钮样式优化
-:deep(.el-button) {
-  border-radius: 8px;
-  transition: all 0.3s ease;
+  .el-button {
+    margin-left: 0;
+  }
 
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  .el-switch {
+    margin-left: 0;
   }
 }
 
-// 输入框样式优化
 :deep(.el-input) {
   .el-input__wrapper {
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    transition: all 0.3s ease;
+    background-color: #1e1e1e !important;
+    background-color: #1e1e1e;
+    box-shadow: 0 0 0 1px #303133 inset;
 
-    &:focus-within {
-      box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+    &.is-focus {
+      box-shadow: 0 0 0 1px #409eff inset;
     }
   }
-}
 
-:deep(.el-form-item--small .el-form-item__label) {
-  height: 24px;
-  line-height: 24px;
-  color: white;
+  .el-input__inner {
+    color: white !important;
+
+    &::placeholder {
+      color: #606266;
+    }
+  }
 }
 
 .rag-form {
