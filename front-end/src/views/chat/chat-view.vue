@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { nextTick, onMounted, onUnmounted, ref, Text, watch } from 'vue'
 import SessionItem from './components/session-item.vue'
-import { ChatRound, Close, Delete, EditPen, Upload } from '@element-plus/icons-vue'
+import { ChatRound, Close, Delete, EditPen, Upload, Share } from '@element-plus/icons-vue'
 import MessageRow from './components/message-row.vue'
 import MessageInput from './components/message-input.vue'
 import { storeToRefs } from 'pinia'
@@ -701,6 +701,37 @@ async function handleSearchWeb(message: boolean) {
 function handleLogin() {
   loginRef.value.show()
 }
+
+async function unbindX() {
+  try {
+    const confirmResult = await ElMessageBox.confirm('Are you sure you want to unbind X?', 'Warning', {
+      confirmButtonText: 'OK',
+      cancelButtonText: 'Cancel',
+      type: 'warning',
+    })
+
+    if (confirmResult === 'confirm') {
+      await request({
+        url: BASE_URL + '/mgn/agent/unbindX',
+        method: 'GET',
+        params: {
+          sid: myAgent.value.sid,
+        },
+        headers: {
+          'X-Access-Token': token.value,
+        },
+      })
+      location.reload()
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage({
+        type: 'error',
+        message: 'Failed to unbind X',
+      })
+    }
+  }
+}
 </script>
 <template>
   <div class="home-view">
@@ -736,7 +767,7 @@ function handleLogin() {
           <div class="mb-4">
             <el-input v-model="searchQuery" placeholder="Search agents..." class="w-full" :prefix-icon="Search"></el-input>
           </div>
-          <div ref="contactListRef" class="h-[calc(80vh-80px)] overflow-y-auto custom-scrollbar" style="max-height: calc(90% - 120px)">
+          <div ref="contactListRef" class="h-[calc(75vh-80px)] overflow-y-auto custom-scrollbar" style="max-height: calc(90% - 120px)">
             <div class="space-y-2">
               <div
                 v-for="agent in agentList"
@@ -791,6 +822,12 @@ function handleLogin() {
                 <img style="width: 15px; height: 15px" src="../../assets/bind.svg" alt="upload" />
               </el-button>
             </el-form-item>
+
+            <el-form-item v-else label="Unbind X" class="form-item-align">
+              <el-button class="ml-0" :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" @click="unbindX">
+                <img style="width: 15px; height: 15px" src="../../assets/unbind.svg" alt="upload" />
+              </el-button>
+            </el-form-item>
           </el-form>
         </div>
       </div>
@@ -809,12 +846,11 @@ function handleLogin() {
                     <span class="text-white text-base">{{ selectAgent.nickName }}</span>
                   </div>
 
-                  <div v-if="selectAgent.xname" class="mt-2">
-                    <span class="text-gray-400 text-sm"> (@{{ selectAgent.xname }}) </span>
-                    <el-link class="ml-10" @click="handleShareTwitter">
+                  <div v-if="selectAgent.xname" class="mt-2 flex items-center">
+                    <span class="text-gray-400 text-sm flex items-center"> <img src="../../assets/x.svg" alt="X" style="width: 14px; height: 14px; margin-right: 4px" /> (@{{ selectAgent.xusername }}) </span>
+                    <el-link class="ml-4" @click="handleShareTwitter">
                       <div class="flex items-center">
-                        <img src="../../assets/x.svg" alt="X" style="width: 14px; height: 14px; margin-right: 4px" />
-                        Share
+                        <el-icon size="20"><Share /></el-icon>
                       </div>
                     </el-link>
                   </div>
@@ -1025,15 +1061,17 @@ function handleLogin() {
   flex-direction: column;
   align-items: stretch;
   justify-content: center;
+  overflow: hidden;
 
   .chat-panel {
     margin: 0 auto;
     width: 90%;
     display: flex;
     background-color: #1e1e1e;
-    height: 90%;
+    height: 90vh;
     box-shadow: 0 0 10px rgba(black, 0.1);
     border-radius: 10px;
+    overflow: hidden;
 
     .session-panel {
       display: flex;
@@ -1044,6 +1082,7 @@ function handleLogin() {
       border-right: 1px solid rgba(255, 255, 255, 0.07);
       background-color: #141414;
       height: 100%;
+      overflow: hidden;
       /* Title */
       .title {
         margin-top: 20px;
