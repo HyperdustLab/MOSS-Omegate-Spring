@@ -856,7 +856,7 @@ async function unbindX() {
                   <div v-if="selectAgent.xname" class="mt-3 flex items-start rounded-lg transition-all duration-300 hover:bg-gray-700/10">
                     <span class="text-gray-300 text-sm flex items-center group text-left">
                       <img src="../../assets/x.svg" alt="X" class="w-4 h-4 mr-2 transition-transform duration-300 group-hover:scale-110 flex-shrink-0" />
-                      <span class="font-medium truncate text-gray-400">@{{ selectAgent.xusername }}</span>
+                      <a :href="`https://x.com/${selectAgent.xusername}`" target="_blank" class="font-medium truncate text-gray-400">@{{ selectAgent.xusername }}</a>
                     </span>
                     <el-link class="flex items-center transition-all duration-300 hover:scale-105 ml-5 mt-2" @click="handleShareTwitter" :underline="false">
                       <el-icon size="18" class="text-blue-400 hover:text-blue-300 transition-colors duration-300">
