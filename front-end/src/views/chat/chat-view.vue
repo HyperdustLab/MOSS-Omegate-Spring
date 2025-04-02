@@ -945,15 +945,16 @@ async function unbindX() {
 <style lang="scss" scoped>
 :deep .el-card {
   --el-card-border-color: #303133;
-  --el-card-border-radius: 4px;
+  --el-card-border-radius: 12px;
   --el-card-padding: 20px;
-  --el-card-bg-color: var(--el-fill-color-blank);
+  --el-card-bg-color: rgba(48, 49, 51, 0.95);
   background-color: var(--el-card-bg-color);
   border: 1px solid var(--el-card-border-color);
   border-radius: var(--el-card-border-radius);
   color: var(--el-text-color-primary);
   overflow: hidden;
-  transition: var(--el-transition-duration);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
 :deep .el-input-group__append {
@@ -1034,24 +1035,38 @@ async function unbindX() {
 }
 
 .loading-indicator {
-  text-align: center;
-  padding: 10px;
-  font-size: 16px;
-  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.7);
+
+  &::after {
+    content: '';
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
 }
 
-:deep(.el-divider--horizontal) {
-  border-top: 1px solid #282c34;
-  display: block;
-  height: 1px;
-  margin: 24px 0;
-  width: 100%;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-:deep(.el-form-item--small .el-form-item__label) {
-  height: 24px;
-  line-height: 24px;
-  color: white;
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .home-view {
@@ -1062,189 +1077,120 @@ async function unbindX() {
   align-items: stretch;
   justify-content: center;
   overflow: hidden;
+  background: linear-gradient(to bottom right, #141414, #1e1e1e);
 
   .chat-panel {
     margin: 0 auto;
     width: 90%;
     display: flex;
-    background-color: #1e1e1e;
+    background: linear-gradient(to right, #1a1a1a, #2d2d2d);
     height: 90vh;
-    box-shadow: 0 0 10px rgba(black, 0.1);
-    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    border-radius: 16px;
     overflow: hidden;
+    transition: all 0.3s ease;
+
+    .contact-panel {
+      background: rgba(30, 30, 30, 0.95);
+      backdrop-filter: blur(10px);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+
+      .agent-item {
+        transition: all 0.3s ease;
+
+        &:hover {
+          transform: translateX(5px);
+          background: rgba(255, 255, 255, 0.05);
+        }
+      }
+    }
 
     .session-panel {
-      display: flex;
-      flex-direction: column;
-      box-sizing: border-box;
-      padding: 20px;
-      position: relative;
-      border-right: 1px solid rgba(255, 255, 255, 0.07);
-      background-color: #141414;
-      height: 100%;
-      overflow: hidden;
-      /* Title */
-      .title {
-        margin-top: 20px;
-        font-size: 20px;
-        color: #ffffff;
-      }
+      background: rgba(20, 20, 20, 0.95);
+      backdrop-filter: blur(10px);
 
-      .session-list {
-        overflow-y: scroll;
-        margin: 20px 0;
-        flex: 1;
+      .session-item {
+        transition: all 0.3s ease;
 
-        .session {
-          /* Space between sessions */
-          margin-top: 20px;
-        }
-
-        .session:first-child {
-          margin-top: 0;
-        }
-      }
-
-      .button-wrapper {
-        /* entity-panel is relative layout, button-wrapper is absolute relative to it */
-        bottom: 20px;
-        left: 0;
-        display: flex;
-        /* Show buttons on right */
-        justify-content: flex-end;
-        /* Same width as session-panel */
-        width: 100%;
-
-        /* Leave space between button and right edge */
-        .new-session {
-          margin-right: 20px;
+        &:hover {
+          transform: translateX(5px);
+          background: rgba(255, 255, 255, 0.05);
         }
       }
     }
 
-    /* Right message history panel */
     .message-panel {
-      width: calc(100% - 500px);
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-
-      .header {
-        padding: 20px 20px 0 20px;
-        display: flex;
-        /* Session name and edit button distributed left and right horizontally */
-        justify-content: space-between;
-
-        /* Front title and message count */
-        .front {
-          .title {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 16px;
-          }
-
-          .description {
-            margin-top: 10px;
-            color: rgba(255, 255, 255, 0.5);
-          }
-        }
-
-        /* Edit and cancel edit buttons at end */
-        .rear {
-          display: flex;
-          align-items: center;
-        }
-      }
+      padding: 1.5rem;
 
       .message-list {
-        padding: 15px;
-        width: 100%;
-        flex: 1;
-        box-sizing: border-box;
-        // Scroll overflow when too many messages
-        overflow-y: scroll;
-        // Transition effect when switching chat sessions
-        .list-enter-active,
-        .list-leave-active {
-          transition: all 0.5s ease;
-        }
+        gap: 1rem;
 
-        .list-enter-from,
-        .list-leave-to {
-          opacity: 0;
-          transform: translateX(30px);
+        .message-row {
+          animation: fadeIn 0.3s ease;
         }
       }
-    }
 
-    // Options panel
-    .option-panel {
-      width: 100%;
-      padding: 20px;
-      border-left: 1px solid rgba(black, 0.07);
-
-      .upload {
-        width: 160px;
+      .header {
+        background: rgba(30, 30, 30, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
       }
     }
   }
 }
 
-// 修改滚动条样式
+// 自定义滚动条
 .custom-scrollbar {
   &::-webkit-scrollbar {
-    width: 0; // 将宽度设为0来隐藏滚动条
-    display: none; // 完全隐藏滚动条
+    width: 6px;
   }
 
-  // 添加 Firefox 的滚动条隐藏
-  scrollbar-width: none;
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+  }
 
-  // 添加 IE 的滚动条隐藏
-  -ms-overflow-style: none;
-}
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
 
-// 可以添加选中状态的过渡效果
-.transition-colors {
-  transition: background-color 0.2s ease;
-}
-
-:deep(.option-form) {
-  .el-form-item {
-    margin-bottom: 12px;
-
-    .el-form-item__label {
-      justify-content: flex-start;
-      padding-right: 8px;
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
   }
+}
 
-  .el-button {
-    margin-left: 0;
-  }
+// 按钮样式优化
+:deep(.el-button) {
+  border-radius: 8px;
+  transition: all 0.3s ease;
 
-  .el-switch {
-    margin-left: 0;
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 }
 
+// 输入框样式优化
 :deep(.el-input) {
   .el-input__wrapper {
-    background-color: #1e1e1e !important;
-    background-color: #1e1e1e;
-    box-shadow: 0 0 0 1px #303133 inset;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
 
-    &.is-focus {
-      box-shadow: 0 0 0 1px #409eff inset;
+    &:focus-within {
+      box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
     }
   }
+}
 
-  .el-input__inner {
-    color: white !important;
-
-    &::placeholder {
-      color: #606266;
-    }
-  }
+:deep(.el-form-item--small .el-form-item__label) {
+  height: 24px;
+  line-height: 24px;
+  color: white;
 }
 
 .rag-form {
