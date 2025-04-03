@@ -85,6 +85,11 @@ const currSessionId = ref(generateUUID())
 // 添加搜索相关的响应式变量
 const searchQuery = ref('')
 
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const sid = route.query.sid
+
 onMounted(async () => {
   await getAgentList()
 
@@ -93,6 +98,24 @@ onMounted(async () => {
 
     await getAgent()
     // loginRef.value.show()
+  }
+
+  if (sid) {
+    const { result } = await request({
+      url: BASE_URL + '/mgn/agent/list',
+      params: {
+        sid: sid,
+      },
+      method: 'GET',
+    })
+
+    handleSelectAgent(result.records[0])
+  } else {
+    if (localStorage.getItem('X-Token')) {
+      handleSelectAgent(myAgent.value)
+    } else {
+      handleSelectAgent(agentList.value[0])
+    }
   }
 
   // 添加滚动监听
@@ -128,8 +151,9 @@ function handleCreateMyAgent() {
   window.open('https://www.aipod.fun/create-new-agent')
 }
 
-async function handleShareTwitter() {
-  const currentUrl = window.location.href
+async function handleShareTwitter(sid) {
+  debugger
+  const currentUrl = window.location.origin + '?sid=' + (sid || selectAgent.value.sid)
   const shareText = `check out moss AI agent`
   const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(currentUrl)}`
   window.open(twitterShareUrl, '_blank')
@@ -234,8 +258,6 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
     },
   })
 
-  console.info('res.result', res.result)
-
   options.value.baseUrl = `http://${res.result.ip}:${res.result.port}`
 
   const body: AiMessageWrapper = { message: chatMessage, params: options.value }
@@ -260,7 +282,7 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
     const response = JSON.parse(event.data) as ChatResponse
     const finishReason = response.result.metadata.finishReason
     if (response.result.output.content) {
-      if (isThinking) {
+      if (isThinking && !options.value.enableAgent) {
         buffer = response.result.output.content
         if (buffer.indexOf('</think>') > -1) {
           isThinking = false
@@ -404,7 +426,6 @@ async function getAgent() {
   if (records.length > 0) {
     agent.value = records[0]
     myAgent.value = records[0]
-    handleSelectAgent(records[0])
   }
 }
 
@@ -439,9 +460,6 @@ async function getAgentList(isLoadMore = false) {
       agentList.value = [...agentList.value, ...result.records]
     } else {
       agentList.value = result.records
-      if (!myAgent.value) {
-        handleSelectAgent(result.records[0])
-      }
     }
 
     noMore.value = agentList.value.length >= total.value
@@ -785,7 +803,13 @@ async function unbindX() {
               >
                 <el-avatar :size="40" :src="agent.avatar" />
                 <div>
-                  <div class="text-white text-sm">{{ agent.nickName }}</div>
+                  <div class="text-white text-sm flex items-center">
+                    {{ agent.nickName }}
+                    <img v-if="agent.xname" src="../../assets/x.svg" alt="X" class="w-4 h-4 ml-6 mt-2" />
+                    <el-icon size="18" class="hover:text-blue-300 transition-colors duration-300 ml-6 mt-2" @click.stop="handleShareTwitter(agent.sid)">
+                      <Share />
+                    </el-icon>
+                  </div>
                 </div>
               </div>
 
@@ -851,6 +875,12 @@ async function unbindX() {
                 <div class="flex flex-col ml-10">
                   <div class="flex items-center">
                     <span class="text-white text-base">{{ selectAgent.nickName }}</span>
+
+                    <el-link v-if="!selectAgent.xname" class="flex items-center transition-all duration-300 hover:scale-105 ml-5 mt-2" @click="handleShareTwitter(selectAgent.sid)" :underline="false">
+                      <el-icon size="18" class="text-blue-400 hover:text-blue-300 transition-colors duration-300">
+                        <Share />
+                      </el-icon>
+                    </el-link>
                   </div>
 
                   <div v-if="selectAgent.xname" class="mt-3 flex items-start rounded-lg transition-all duration-300 hover:bg-gray-700/10">
@@ -858,7 +888,7 @@ async function unbindX() {
                       <img src="../../assets/x.svg" alt="X" class="w-4 h-4 mr-2 transition-transform duration-300 group-hover:scale-110 flex-shrink-0" />
                       <a :href="`https://x.com/${selectAgent.xusername}`" target="_blank" class="font-medium truncate text-gray-400">@{{ selectAgent.xusername }}</a>
                     </span>
-                    <el-link class="flex items-center transition-all duration-300 hover:scale-105 ml-5 mt-2" @click="handleShareTwitter" :underline="false">
+                    <el-link class="flex items-center transition-all duration-300 hover:scale-105 ml-5 mt-2" :underline="false" @click="handleShareTwitter(selectAgent.sid)">
                       <el-icon size="18" class="text-blue-400 hover:text-blue-300 transition-colors duration-300">
                         <Share />
                       </el-icon>
@@ -894,7 +924,7 @@ async function unbindX() {
         <div ref="messageListRef" class="message-list">
           <!-- Transition effect -->
           <transition-group name="list" v-if="activeSession && agent">
-            <message-row v-for="message in messageList" :agent-avatar="message.avatar" :avatar="loginUser ? loginUser.avatar : user" :key="message.id" :message="message"></message-row>
+            <message-row v-for="message in messageList" :agent-avatar="message.avatar" :avatar="loginUser && loginUser.avatar ? loginUser.avatar : user" :key="message.id" :message="message"></message-row>
           </transition-group>
         </div>
         <!-- Listen for send event -->
@@ -942,7 +972,7 @@ async function unbindX() {
         </el-dropdown>
         <div v-else class="bg-[#303133] rounded-full fixed top-2 text-white right-25 h-7 w-40 mt-20 z-50 flex items-center justify-center cursor-pointer" @click="handleLogin">
           <el-avatar :size="16" :src="user" style="border: none" />
-          <span class="ml-1.25 text-white"> Guest </span>
+          <span class="ml-1.25 text-white"> Login In </span>
         </div>
 
         <Login ref="loginRef" />
