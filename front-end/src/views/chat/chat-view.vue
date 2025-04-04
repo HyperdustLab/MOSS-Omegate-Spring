@@ -12,6 +12,8 @@ import { type AiMessage, useChatStore } from './store/chat-store'
 import type { AiMessageParams, AiMessageWrapper } from '@/apis/__generated/model/static'
 import Login from '@/components/Login/index.vue'
 
+import { useWebSocket } from '@vueuse/core'
+
 import { ElMessageBox } from 'element-plus'
 
 import UploadEmbedding from './components/uploadEmbedding.vue'
@@ -51,9 +53,40 @@ import Substring from '@/components/Substring.vue'
 
 const loading = ref(false)
 
+const sendLoading = ref(false)
+
 const loginRef = ref<InstanceType<typeof Login>>()
 
 const BASE_URL = import.meta.env.VITE_API_HYPERAGI_API
+
+const wsUserId = generateUUID()
+
+const wsUrl = BASE_URL.replace('http', 'ws').replace('https', 'wss') + '/ws/app/websocket/' + wsUserId
+
+const { status, data, send, open, close } = useWebSocket(wsUrl, {
+  autoReconnect: true,
+  onMessage: (ws, event) => {
+    console.info('event', event)
+    try {
+      const msg = JSON.parse(event.data)
+      if (msg.action === 'callbackAutoReplyTweetsMedia' && msg.data.replyTweetsRecordId === wsUserId) {
+        const text = inputText.value
+        inputReplyMediaFileUrls.value = msg.data.replyMediaFileUrls
+        inputTextReplyStatus.value = true
+        inputText.value = msg.data.tweets
+        sendLoading.value = true
+
+        handleSendMessage({ text: text, inputText: inputText.value, image: '', mediaFileUrls: inputReplyMediaFileUrls.value })
+      }
+    } catch (error) {
+      console.error('error', error)
+    }
+  },
+})
+
+window.setInterval(() => {
+  send('PING')
+}, 10000)
 
 const systemPrompt = ref('')
 
@@ -84,6 +117,12 @@ const currSessionId = ref(generateUUID())
 
 // 添加搜索相关的响应式变量
 const searchQuery = ref('')
+
+const inputText = ref('')
+
+const inputTextReplyStatus = ref(false)
+
+const inputReplyMediaFileUrls = ref([])
 
 import { useRoute } from 'vue-router'
 
@@ -152,7 +191,6 @@ function handleCreateMyAgent() {
 }
 
 async function handleShareTwitter(sid) {
-  debugger
   const currentUrl = window.location.origin + '?sid=' + (sid || selectAgent.value.sid)
   const shareText = `check out moss AI agent`
   const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(currentUrl)}`
@@ -191,7 +229,46 @@ function handleSelectSession(session) {
   getMessageList()
 }
 
-const handleSendMessage = async (message: { text: string; image: string }) => {
+const preHandleSendMessage = async (message: { text: string; image: string }) => {
+  sendLoading.value = true
+  inputText.value = message.text
+
+  const msg = {
+    action: 'autoReplyTweetsMedia',
+    data: {
+      replyTweetsRecordId: wsUserId,
+      tweets: inputText.value,
+    },
+  }
+
+  const chatMessage = {
+    aiSessionId: activeSession.value.id,
+    sessionId: activeSession.value.id,
+    medias: null,
+    textContent: message.text,
+    type: 'USER',
+    avatar: loginUser.value?.avatar,
+    name: loginUser.value?.walletAddress || 'Guest',
+    creatorId: loginUser.value?.id || currSessionId.value,
+    editorId: loginUser.value?.id || currSessionId.value,
+  }
+
+  messageList.value.push(chatMessage)
+
+  await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
+    userId: selectAgent.value.owner,
+    msg: JSON.stringify(msg),
+  })
+
+  setTimeout(() => {
+    console.info('inputTextReplyStatus.value', inputTextReplyStatus.value)
+    if (!inputTextReplyStatus.value) {
+      handleSendMessage({ text: message.text, inputText: message.text, image: '', mediaFileUrls: inputReplyMediaFileUrls.value })
+    }
+  }, 30 * 1000)
+}
+
+const handleSendMessage = async (message: { text: string; inputText: string; image: string; mediaFileUrls: string[] }) => {
   if (!activeSession.value) {
     ElMessage.warning('Please create a session')
     return
@@ -202,21 +279,20 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
   if (message.image) {
     medias.push({ type: 'image', data: message.image })
   }
-  // User question
+
   const chatMessage = {
     aiSessionId: activeSession.value.id,
     sessionId: activeSession.value.id,
     medias,
-    textContent: message.text,
+    textContent: message.inputText,
     type: 'USER',
     avatar: loginUser.value?.avatar,
-    name: loginUser.value?.walletAddress || 'Gu',
+    name: loginUser.value?.walletAddress || 'Guest',
     creatorId: loginUser.value?.id || currSessionId.value,
     editorId: loginUser.value?.id || currSessionId.value,
   }
 
   responseMessage.value = {
-    medias: [],
     type: 'ASSISTANT',
     textContent: '',
     aiSessionId: activeSession.value.id,
@@ -297,13 +373,17 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
       })
     }
     if (finishReason && finishReason.toLowerCase() == 'stop') {
+      sendLoading.value = false
       evtSource.close()
+
+      chatMessage.textContent = message.text
+      responseMessage.value.medias = message.mediaFileUrls.map((url) => ({ type: 'image', data: url }))
 
       await saveMessage(chatMessage)
       await saveMessage(responseMessage.value)
 
       await addReasoningRecord({
-        inputContent: chatMessage.textContent,
+        inputContent: message.inputText,
         outContent: responseMessage.value.textContent,
         agentId: selectAgent.value.sid,
         userId: loginUser.value?.id || '',
@@ -319,7 +399,7 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
   evtSource.stream()
 
   // Display both messages on page
-  messageList.value.push(...[chatMessage, responseMessage.value])
+  messageList.value.push(...[responseMessage.value])
   await nextTick(() => {
     messageListRef.value?.scrollTo(0, messageListRef.value.scrollHeight)
   })
@@ -928,7 +1008,7 @@ async function unbindX() {
           </transition-group>
         </div>
         <!-- Listen for send event -->
-        <message-input @send="handleSendMessage" @search="handleSearchWeb" :functionStatus="selectAgent.functionStatus" v-if="activeSession && selectAgent"></message-input>
+        <message-input @send="preHandleSendMessage" :loading="sendLoading" @search="handleSearchWeb" :functionStatus="selectAgent.functionStatus" v-if="activeSession && selectAgent"></message-input>
 
         <el-dropdown v-if="loginUser" class="bg-[#303133] rounded-full fixed top-2 right-25 h-7 w-40 mt-20 z-50">
           <span class="el-dropdown-link mt-[-5px] flex items-center">

@@ -9,6 +9,7 @@ type Message = {
 }
 const props = defineProps<{
   functionStatus: string
+  loading: boolean
 }>()
 
 // Send message event
@@ -59,7 +60,7 @@ const uploadToggleButton = () => {
         </div>
       </div>
       <div class="button-wrapper">
-        <el-button round type="primary" @click="sendMessage">
+        <el-button :loading="props.loading" round type="primary" @click="sendMessage">
           <el-icon class="el-icon--left">
             <Position />
           </el-icon>
