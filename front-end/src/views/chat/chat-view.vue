@@ -841,8 +841,8 @@ async function unbindX() {
 <template>
   <div class="home-view">
     <!-- LOGO部分调整到最左边 -->
-    <div class="w-full flex items-start px-4 py-3 border-b border-gray-700 fixed top-0 left-0 z-10" @click="goHome">
-      <img src="../../assets/logo1.gif" style="width: 60px; height: 80px" loading="lazy" class="cursor-pointer ml-[100px]" alt="logo" />
+    <div class="w-full flex items-start px-4 py-3 border-b border-gray-700 fixed top-0 left-0 z-10">
+      <img @click="goHome" src="../../assets/logo1.gif" style="width: 60px; height: 80px" loading="lazy" class="cursor-pointer ml-[100px]" alt="logo" />
     </div>
 
     <!-- Entire chat panel -->
