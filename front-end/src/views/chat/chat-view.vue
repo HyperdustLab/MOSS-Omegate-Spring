@@ -903,9 +903,6 @@ async function unbindX() {
                   <div class="text-white text-sm flex items-center">
                     {{ agent.nickName }}
                     <img v-if="agent.xname" src="../../assets/x.svg" alt="X" class="w-4 h-4 ml-6 mt-2" />
-                    <el-icon size="18" class="hover:text-blue-300 transition-colors duration-300 ml-6 mt-2" @click.stop="handleShareTwitter(agent.sid)">
-                      <Share />
-                    </el-icon>
                   </div>
                 </div>
               </div>
