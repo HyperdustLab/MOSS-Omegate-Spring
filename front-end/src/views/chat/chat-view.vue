@@ -282,7 +282,7 @@ const preHandleSendMessage = async (message: { text: string; image: string }) =>
     if (!inputTextReplyStatus.value) {
       handleSendMessage({ text: message.text, inputText: message.text, image: '', mediaFileUrls: inputReplyMediaFileUrls.value })
     }
-  }, 30 * 1000)
+  }, 10 * 1000)
 }
 
 const handleSendMessage = async (message: { text: string; inputText: string; image: string; mediaFileUrls: string[] }) => {
