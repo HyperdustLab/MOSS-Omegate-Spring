@@ -625,7 +625,7 @@ const goHome = () => {
 }
 
 function goUser() {
-  location.href = `https://user.hyperagi.network/login?token=${token.value}`
+  location.href = `https://user.mossai.com/login?token=${token.value}`
 }
 
 function showUploadEmbedding() {
