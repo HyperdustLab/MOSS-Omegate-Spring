@@ -61,6 +61,10 @@ const BASE_URL = import.meta.env.VITE_API_HYPERAGI_API
 
 const wsUserId = generateUUID()
 
+// Add timestamp and flag for message processing control
+const lastProcessedTime = ref(0)
+const isProcessing = ref(false)
+
 const wsUrl = BASE_URL.replace('http', 'ws').replace('https', 'wss') + '/ws/app/websocket/' + wsUserId
 
 const { status, data, send, open, close } = useWebSocket(wsUrl, {
@@ -68,18 +72,31 @@ const { status, data, send, open, close } = useWebSocket(wsUrl, {
   onMessage: (ws, event) => {
     console.info('event', event)
     try {
+      const currentTime = Date.now()
+      // Only process if more than 10 seconds have passed since last processing
+      if (currentTime - lastProcessedTime.value < 10000 || isProcessing.value) {
+        console.log('Message ignored due to rate limiting')
+        return
+      }
+
       const msg = JSON.parse(event.data)
       if (msg.action === 'callbackAutoReplyTweetsMedia' && msg.data.replyTweetsRecordId === wsUserId) {
+        isProcessing.value = true
+        lastProcessedTime.value = currentTime
+
         const text = inputText.value
         inputReplyMediaFileUrls.value = msg.data.replyMediaFileUrls
         inputTextReplyStatus.value = true
         inputText.value = msg.data.tweets
         sendLoading.value = true
 
-        handleSendMessage({ text: text, inputText: inputText.value, image: '', mediaFileUrls: inputReplyMediaFileUrls.value })
+        handleSendMessage({ text: text, inputText: inputText.value, image: '', mediaFileUrls: inputReplyMediaFileUrls.value }).finally(() => {
+          isProcessing.value = false
+        })
       }
     } catch (error) {
       console.error('error', error)
+      isProcessing.value = false
     }
   },
 })
