@@ -21,7 +21,7 @@ request.interceptors.response.use(
       return
     }
 
-    if (response.data.code !== 1) {
+    if (response.data.code !== 1 && response.data.code !== 401) {
       console.info()
       ElMessage.warning({ message: 'Request failed, please try again later' })
     }

@@ -152,7 +152,6 @@ onMounted(async () => {
   if (localStorage.getItem('X-Token')) {
     await getLoginUser()
 
-    await getAgent()
     // loginRef.value.show()
   }
 
@@ -167,7 +166,7 @@ onMounted(async () => {
 
     handleSelectAgent(result.records[0])
   } else {
-    if (localStorage.getItem('X-Token')) {
+    if (loginUser.value) {
       handleSelectAgent(myAgent.value)
     } else {
       handleSelectAgent(agentList.value[0])
@@ -598,21 +597,20 @@ watch(searchQuery, () => {
 })
 
 async function getLoginUser() {
-  const res = await request({
-    url: BASE_URL + '/sys/getCurrUser',
-    headers: {
-      'X-Access-Token': token.value,
-    },
-    method: 'GET',
-  }).catch((error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('X-Token')
-      location.reload()
-    }
-    throw error
-  })
+  try {
+    const res = await request({
+      url: BASE_URL + '/sys/getCurrUser',
+      headers: {
+        'X-Access-Token': token.value,
+      },
+      method: 'GET',
+    })
 
-  loginUser.value = res.result
+    loginUser.value = res.result
+    await getAgent()
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 const disconnect = () => {
