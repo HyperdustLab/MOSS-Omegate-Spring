@@ -164,6 +164,8 @@ onMounted(async () => {
     await getLoginUser()
   }
 
+  await getAgentList()
+
   if (sid) {
     const { result } = await request({
       url: BASE_URL + '/mgn/agent/list',
@@ -184,8 +186,6 @@ onMounted(async () => {
       handleSelectAgent(agentList.value[0])
     }
   }
-
-  await getAgentList()
 
   // 添加滚动监听
   contactListRef.value?.addEventListener('scroll', handleScroll)
@@ -850,7 +850,7 @@ async function unbindX() {
         <div class="p-4">
           <div class="text-white text-lg mb-4">My Agent</div>
           <div class="space-y-4 mb-6">
-            <el-select v-model="selectMyAgentId" clearable placeholder="Select an agent" @change="(val) => handleSelectAgent(myAgentList.find((a) => a.id === val))">
+            <el-select v-if="myAgentList.length > 0" v-model="selectMyAgentId" clearable placeholder="Select an agent" @change="(val) => handleSelectAgent(myAgentList.find((a) => a.id === val))">
               <el-option v-for="(myAgent, index) in myAgentList" :key="index" :label="myAgent.nickName" :value="myAgent.id" class="dark-option">
                 <div class="flex items-center space-x-3">
                   <el-avatar :size="40" :src="myAgent.avatar" />
@@ -859,7 +859,7 @@ async function unbindX() {
               </el-option>
             </el-select>
 
-            <div v-if="myAgentList.length === 0">
+            <div v-else>
               <div class="flex items-center justify-center p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors duration-200">
                 <el-button @click="handleCreateMyAgent" round type="primary" class="w-full">Create My Agent</el-button>
               </div>
