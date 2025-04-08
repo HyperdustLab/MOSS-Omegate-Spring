@@ -918,7 +918,7 @@ async function unbindX() {
         </div>
 
         <div class="option-panel">
-          <el-form size="small" v-if="myAgent && myAgent.id === selectAgentId" class="rag-form">
+          <el-form size="small" v-if="selectMyAgentId" class="rag-form">
             <el-form-item label-width="8.2rem" label="RAG Knowledge" class="form-item-align">
               <el-button class="ml-0" :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" @click="showUploadEmbedding">
                 <img style="width: 15px; height: 15px" src="../../assets/docUpload.svg" alt="upload" />
