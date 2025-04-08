@@ -233,7 +233,7 @@ function generateUUID() {
 }
 
 function handleCreateMyAgent() {
-  window.open('https://www.aipod.fun/create-new-agent')
+  window.open('https://www.hyperagi.network/store')
 }
 
 async function handleShareTwitter(sid) {
@@ -301,17 +301,21 @@ const preHandleSendMessage = async (message: { text: string; image: string }) =>
 
   messageList.value.push(chatMessage)
 
-  await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
-    userId: selectAgent.value.owner,
-    msg: JSON.stringify(msg),
-  })
+  if (options.value.enableAgent) {
+    handleSendMessage({ text: message.text, inputText: message.text, image: '', mediaFileUrls: [] })
+  } else {
+    await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
+      userId: selectAgent.value.owner,
+      msg: JSON.stringify(msg),
+    })
 
-  setTimeout(() => {
-    console.info('inputTextReplyStatus.value', inputTextReplyStatus.value)
-    if (!inputTextReplyStatus.value) {
-      handleSendMessage({ text: message.text, inputText: message.text, image: '', mediaFileUrls: inputReplyMediaFileUrls.value })
-    }
-  }, 10 * 1000)
+    setTimeout(() => {
+      console.info('inputTextReplyStatus.value', inputTextReplyStatus.value)
+      if (!inputTextReplyStatus.value) {
+        handleSendMessage({ text: message.text, inputText: message.text, image: '', mediaFileUrls: inputReplyMediaFileUrls.value })
+      }
+    }, 10 * 1000)
+  }
 }
 
 const handleSendMessage = async (message: { text: string; inputText: string; image: string; mediaFileUrls: string[] }) => {
@@ -356,14 +360,17 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
   let agentName = ''
 
   options.value.userId = selectAgent.value.sid
-  content = selectAgent.value.personalization
-  agentName = selectAgent.value.nickName
 
-  if (!content) {
-    content = defaultContent.value
+  if (!options.value.enableAgent) {
+    agentName = selectAgent.value.nickName
+
+    content = selectAgent.value.personalization
+    if (!content) {
+      content = defaultContent.value
+    }
+
+    content = content.replace('[agent name]', agentName)
   }
-
-  content = content.replace('[agent name]', agentName)
 
   form.set('content', content)
 
@@ -421,7 +428,9 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
       evtSource.close()
 
       chatMessage.textContent = message.text
-      responseMessage.value.medias = message.mediaFileUrls.map((url) => ({ type: 'image', data: url }))
+      if (message.mediaFileUrls) {
+        responseMessage.value.medias = message.mediaFileUrls.map((url) => ({ type: 'image', data: url }))
+      }
 
       await saveMessage(chatMessage)
       await saveMessage(responseMessage.value)
