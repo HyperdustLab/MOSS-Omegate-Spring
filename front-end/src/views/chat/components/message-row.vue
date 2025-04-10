@@ -97,6 +97,17 @@ const images = computed(() => {
       &.user {
         background-color: #213d5b;
       }
+
+      :deep(.custom-markdown) {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.8;
+
+        p {
+          margin: 1em 0;
+          word-spacing: 0.05em;
+          letter-spacing: 0.01em;
+        }
+      }
     }
   }
 }

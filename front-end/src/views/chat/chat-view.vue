@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { nextTick, onMounted, onUnmounted, ref, Text, watch } from 'vue'
 import SessionItem from './components/session-item.vue'
-import { ChatRound, Close, Delete, EditPen, Upload } from '@element-plus/icons-vue'
+import { ChatRound, Close, Delete, EditPen, Upload, Share } from '@element-plus/icons-vue'
 import MessageRow from './components/message-row.vue'
 import MessageInput from './components/message-input.vue'
 import { storeToRefs } from 'pinia'
@@ -11,6 +11,8 @@ import { SSE } from 'sse.js'
 import { type AiMessage, useChatStore } from './store/chat-store'
 import type { AiMessageParams, AiMessageWrapper } from '@/apis/__generated/model/static'
 import Login from '@/components/Login/index.vue'
+
+import { useWebSocket } from '@vueuse/core'
 
 import { ElMessageBox } from 'element-plus'
 
@@ -51,14 +53,61 @@ import Substring from '@/components/Substring.vue'
 
 const loading = ref(false)
 
+const sendLoading = ref(false)
+
 const loginRef = ref<InstanceType<typeof Login>>()
 
 const BASE_URL = import.meta.env.VITE_API_HYPERAGI_API
 
-const systemPrompt = ref('')
+const wsUserId = generateUUID()
 
-const agent = ref(null)
-const myAgent = ref(null)
+const selectMyAgentId = ref('')
+
+// Add timestamp and flag for message processing control
+const lastProcessedTime = ref(0)
+const isProcessing = ref(false)
+
+const wsUrl = BASE_URL.replace('http', 'ws').replace('https', 'wss') + '/ws/app/websocket/' + wsUserId
+
+const { status, data, send, open, close } = useWebSocket(wsUrl, {
+  autoReconnect: true,
+  onMessage: (ws, event) => {
+    console.info('event', event)
+    try {
+      const currentTime = Date.now()
+      // Only process if more than 10 seconds have passed since last processing
+      if (currentTime - lastProcessedTime.value < 10000 || isProcessing.value) {
+        console.log('Message ignored due to rate limiting')
+        return
+      }
+
+      const msg = JSON.parse(event.data)
+      if (msg.action === 'callbackAutoReplyTweetsMedia' && msg.data.replyTweetsRecordId === wsUserId) {
+        isProcessing.value = true
+        lastProcessedTime.value = currentTime
+
+        const text = inputText.value
+        inputReplyMediaFileUrls.value = msg.data.replyMediaFileUrls
+        inputTextReplyStatus.value = true
+        inputText.value = msg.data.tweets
+        sendLoading.value = true
+
+        handleSendMessage({ text: text, inputText: inputText.value, image: '', mediaFileUrls: inputReplyMediaFileUrls.value }).finally(() => {
+          isProcessing.value = false
+        })
+      }
+    } catch (error) {
+      console.error('error', error)
+      isProcessing.value = false
+    }
+  },
+})
+
+window.setInterval(() => {
+  send('PING')
+}, 10000)
+
+const myAgentList = ref([])
 
 const messageList = ref([])
 
@@ -80,18 +129,62 @@ const noMore = ref(false)
 const selectAgent = ref(null)
 const selectAgentId = ref(null)
 
+const currSessionId = ref(generateUUID())
+
 // 添加搜索相关的响应式变量
 const searchQuery = ref('')
 
+const inputText = ref('')
+
+const inputTextReplyStatus = ref(false)
+
+const inputReplyMediaFileUrls = ref([])
+
+const loginUser = ref(null)
+
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const sid = route.query.sid
+
+const defaultContent = ref(null)
+
+const options = ref<AiMessageParams>({
+  enableVectorStore: false,
+  enableAgent: false,
+  model: '',
+  baseUrl: '',
+})
+const embeddingLoading = ref(false)
+
 onMounted(async () => {
-  if (!localStorage.getItem('X-Token')) {
-    loginRef.value.show()
-  } else {
+  await getDefaultContent()
+
+  if (localStorage.getItem('X-Token')) {
     await getLoginUser()
+  }
 
-    await getAgent()
+  await getAgentList()
 
-    await getAgentList()
+  if (sid) {
+    const { result } = await request({
+      url: BASE_URL + '/mgn/agent/list',
+      params: {
+        sid: sid,
+      },
+      method: 'GET',
+    })
+
+    handleSelectAgent(result.records[0])
+  } else {
+    if (loginUser.value) {
+      await getMyAgent()
+
+      handleSelectAgent(myAgentList.value[0])
+      selectMyAgentId.value = myAgentList.value[0].id
+    } else {
+      handleSelectAgent(agentList.value[0])
+    }
   }
 
   // 添加滚动监听
@@ -112,6 +205,44 @@ const responseMessage = ref<AiMessage>({
   sessionId: '',
 })
 
+async function getDefaultContent() {
+  const { result } = await request({
+    url: BASE_URL + '/mgn/agentNpc/list',
+    method: 'GET',
+    params: {
+      name: 'agentme',
+    },
+    headers: {
+      'X-Access-Token': token.value,
+    },
+  })
+  if (result.records.length > 0) {
+    defaultContent.value = result.records[0].alpacaPrompt
+  }
+}
+
+function generateUUID() {
+  const bytes = new Uint8Array(16)
+  window.crypto.getRandomValues(bytes)
+
+  bytes[6] = (bytes[6] & 0x0f) | 0x40 // Set the version to 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80 // Set the variant to 10xx
+
+  const uuid = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+  return `${uuid.slice(0, 8)}-${uuid.slice(8, 12)}-${uuid.slice(12, 16)}-${uuid.slice(16, 20)}-${uuid.slice(20)}`
+}
+
+function handleCreateMyAgent() {
+  window.open('https://www.hyperagi.network/store')
+}
+
+async function handleShareTwitter(sid) {
+  const currentUrl = window.location.origin + '?sid=' + (sid || selectAgent.value.sid)
+  const shareText = `check out moss AI agent`
+  const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(currentUrl)}`
+  window.open(twitterShareUrl, '_blank')
+}
+
 async function getSessionList() {
   const { result } = await request({
     url: BASE_URL + '/mgn/aiSession/list',
@@ -125,7 +256,7 @@ async function getSessionList() {
       pageSize: 10,
       column: 'createdTime',
       order: 'desc',
-      creatorId: loginUser.value.id,
+      creatorId: loginUser.value?.id || currSessionId.value,
       agentId: selectAgent.value.sid,
     },
   })
@@ -144,7 +275,50 @@ function handleSelectSession(session) {
   getMessageList()
 }
 
-const handleSendMessage = async (message: { text: string; image: string }) => {
+const preHandleSendMessage = async (message: { text: string; image: string }) => {
+  sendLoading.value = true
+  inputText.value = message.text
+
+  const msg = {
+    action: 'autoReplyTweetsMedia',
+    data: {
+      replyTweetsRecordId: wsUserId,
+      tweets: inputText.value,
+    },
+  }
+
+  const chatMessage = {
+    aiSessionId: activeSession.value.id,
+    sessionId: activeSession.value.id,
+    medias: null,
+    textContent: message.text,
+    type: 'USER',
+    avatar: loginUser.value?.avatar,
+    name: loginUser.value?.walletAddress || 'Guest',
+    creatorId: loginUser.value?.id || currSessionId.value,
+    editorId: loginUser.value?.id || currSessionId.value,
+  }
+
+  messageList.value.push(chatMessage)
+
+  if (options.value.enableAgent) {
+    handleSendMessage({ text: message.text, inputText: message.text, image: '', mediaFileUrls: [] })
+  } else {
+    await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
+      userId: selectAgent.value.owner,
+      msg: JSON.stringify(msg),
+    })
+
+    setTimeout(() => {
+      console.info('inputTextReplyStatus.value', inputTextReplyStatus.value)
+      if (!inputTextReplyStatus.value) {
+        handleSendMessage({ text: message.text, inputText: message.text, image: '', mediaFileUrls: inputReplyMediaFileUrls.value })
+      }
+    }, 10 * 1000)
+  }
+}
+
+const handleSendMessage = async (message: { text: string; inputText: string; image: string; mediaFileUrls: string[] }) => {
   if (!activeSession.value) {
     ElMessage.warning('Please create a session')
     return
@@ -155,21 +329,20 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
   if (message.image) {
     medias.push({ type: 'image', data: message.image })
   }
-  // User question
+
   const chatMessage = {
     aiSessionId: activeSession.value.id,
     sessionId: activeSession.value.id,
     medias,
-    textContent: message.text,
+    textContent: message.inputText,
     type: 'USER',
-    avatar: loginUser.value.avatar,
-    name: loginUser.value.walletAddress,
-    creatorId: loginUser.value.id,
-    editorId: loginUser.value.id,
+    avatar: loginUser.value?.avatar,
+    name: loginUser.value?.walletAddress || 'Guest',
+    creatorId: loginUser.value?.id || currSessionId.value,
+    editorId: loginUser.value?.id || currSessionId.value,
   }
 
   responseMessage.value = {
-    medias: [],
     type: 'ASSISTANT',
     textContent: '',
     aiSessionId: activeSession.value.id,
@@ -186,19 +359,33 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
 
   let agentName = ''
 
-  if (selectAgent.value) {
-    options.value.userId = selectAgent.value.sid
-    content = selectAgent.value.personalization
+  options.value.userId = selectAgent.value.sid
+
+  if (!options.value.enableAgent) {
     agentName = selectAgent.value.nickName
-  } else {
-    content = systemPrompt.value
-    options.value.userId = ''
-    agentName = 'MOSS'
+
+    content = selectAgent.value.personalization
+    if (!content) {
+      content = defaultContent.value
+    }
+
+    content = content.replace('[agent name]', agentName)
   }
 
-  content = content.replace('[agent name]', agentName)
-
   form.set('content', content)
+
+  options.value.model = options.value.enableAgent ? 'qwen2.5:32b' : 'deepseek-r1:32b'
+
+  const res = await request({
+    url: BASE_URL + `/mgn/nodePort/getNodePort`,
+    method: 'GET',
+    params: { serviceName: options.value.model },
+    headers: {
+      'X-Access-Token': token.value,
+    },
+  })
+
+  options.value.baseUrl = `http://${res.result.ip}:${res.result.port}`
 
   const body: AiMessageWrapper = { message: chatMessage, params: options.value }
 
@@ -214,21 +401,50 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
     payload: form as any,
     method: 'POST',
   })
+
+  let isThinking = true
+  let buffer = ''
+
   evtSource.addEventListener('message', async (event: any) => {
     const response = JSON.parse(event.data) as ChatResponse
     const finishReason = response.result.metadata.finishReason
     if (response.result.output.content) {
-      responseMessage.value.textContent += response.result.output.content
+      if (isThinking && !options.value.enableAgent) {
+        buffer = response.result.output.content
+        if (buffer.indexOf('</think>') > -1) {
+          isThinking = false
+        }
+      } else {
+        responseMessage.value.textContent += response.result.output.content
+      }
+
       // Scroll to bottom
       await nextTick(() => {
         messageListRef.value?.scrollTo(0, messageListRef.value.scrollHeight)
       })
     }
     if (finishReason && finishReason.toLowerCase() == 'stop') {
+      sendLoading.value = false
       evtSource.close()
+
+      chatMessage.textContent = message.text
+      if (message.mediaFileUrls) {
+        responseMessage.value.medias = message.mediaFileUrls.map((url) => ({ type: 'image', data: url }))
+      }
 
       await saveMessage(chatMessage)
       await saveMessage(responseMessage.value)
+
+      await addReasoningRecord({
+        inputContent: message.inputText,
+        outContent: responseMessage.value.textContent,
+        agentId: selectAgent.value.sid,
+        userId: loginUser.value?.id || '',
+        serviceName: options.value.model,
+        systemContent: content,
+        remark: options.value.baseUrl,
+        nodeId: res.result.minerNodeId,
+      })
     }
   })
 
@@ -236,9 +452,20 @@ const handleSendMessage = async (message: { text: string; image: string }) => {
   evtSource.stream()
 
   // Display both messages on page
-  messageList.value.push(...[chatMessage, responseMessage.value])
+  messageList.value.push(...[responseMessage.value])
   await nextTick(() => {
     messageListRef.value?.scrollTo(0, messageListRef.value.scrollHeight)
+  })
+}
+
+async function addReasoningRecord(reasoningRecord) {
+  await request({
+    url: BASE_URL + '/mgn/reasoningRecord/add',
+    method: 'POST',
+    data: reasoningRecord,
+    headers: {
+      'X-Access-Token': token.value,
+    },
   })
 }
 
@@ -260,6 +487,7 @@ const handleSessionCreate = async () => {
     data: {
       agentId: selectAgent.value.sid,
       name: 'New Chat',
+      creatorId: currSessionId.value,
     },
     headers: {
       'X-Access-Token': token.value,
@@ -268,51 +496,7 @@ const handleSessionCreate = async () => {
   getSessionList()
 }
 
-const options = ref<AiMessageParams>({
-  enableVectorStore: false,
-  enableAgent: true,
-})
-const embeddingLoading = ref(false)
-
-const loginUser = ref(null)
-
-async function getSystemPrompt() {
-  const res = await request({
-    url: '/user/getSystemPrompt',
-    method: 'GET',
-  })
-
-  if (res.code === 10012) {
-    localStorage.removeItem('X-Token')
-    location.reload()
-    return
-  }
-
-  systemPrompt.value = res.result
-
-  if (!systemPrompt.value) {
-    getMossaiPrompt()
-  }
-}
-
-async function getMossaiPrompt() {
-  const res = await request({
-    url: BASE_URL + '/mgn/agentNpc/list',
-    method: 'GET',
-    params: {
-      name: 'MOSS',
-    },
-    headers: {
-      'X-Access-Token': token.value,
-    },
-  })
-
-  const records = res.result.records
-
-  systemPrompt.value = records[0].alpacaPrompt
-}
-
-async function getAgent() {
+async function getMyAgent() {
   const { result } = await request({
     url: BASE_URL + '/mgn/agent/list',
     method: 'GET',
@@ -324,13 +508,7 @@ async function getAgent() {
     },
   })
 
-  const records = result.records
-
-  if (records.length > 0) {
-    agent.value = records[0]
-    myAgent.value = records[0]
-    handleSelectAgent(records[0])
-  }
+  myAgentList.value = result.records
 }
 
 // 修改获取agent列表的方法，添加搜索参数
@@ -342,6 +520,7 @@ async function getAgentList(isLoadMore = false) {
       pageNo: pageNum.value,
       pageSize: pageSize.value,
       userOrderNum: true,
+      noWalletAddress: loginUser.value ? loginUser.value.walletAddress : '',
     }
 
     // 只有在搜索关键词不为空时才添加 nickName 参数
@@ -364,9 +543,6 @@ async function getAgentList(isLoadMore = false) {
       agentList.value = [...agentList.value, ...result.records]
     } else {
       agentList.value = result.records
-      if (!myAgent.value) {
-        handleSelectAgent(result.records[0])
-      }
     }
 
     noMore.value = agentList.value.length >= total.value
@@ -408,21 +584,19 @@ watch(searchQuery, () => {
 })
 
 async function getLoginUser() {
-  const res = await request({
-    url: BASE_URL + '/sys/getCurrUser',
-    headers: {
-      'X-Access-Token': token.value,
-    },
-    method: 'GET',
-  }).catch((error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('X-Token')
-      location.reload()
-    }
-    throw error
-  })
+  try {
+    const res = await request({
+      url: BASE_URL + '/sys/getCurrUser',
+      headers: {
+        'X-Access-Token': token.value,
+      },
+      method: 'GET',
+    })
 
-  loginUser.value = res.result
+    loginUser.value = res.result
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 const disconnect = () => {
@@ -435,11 +609,27 @@ const goHome = () => {
 }
 
 function goUser() {
-  location.href = `https://user.hyperagi.network/login?token=${token.value}`
+  location.href = `https://user.mossai.com/login?token=${token.value}`
 }
 
 function showUploadEmbedding() {
   uploadEmbeddingRef.value?.show(myAgent.value.id)
+}
+
+const handleBindTwitter = () => {
+  const data = {
+    token: token.value,
+    id: myAgent.value.sid,
+    type: '1',
+  }
+
+  const encodedData = btoa(JSON.stringify(data))
+
+  window.removeEventListener('message', handleMessage, false)
+
+  window.addEventListener('message', handleMessage, false)
+
+  window.open(BASE_URL + '/mgn/x/render?data=' + encodedData, 'googleLogin', 'width=500,height=600')
 }
 
 const fileList = ref<UploadUserFile[]>([])
@@ -463,20 +653,27 @@ const loadMore = () => {
   getAgentList(true)
 }
 
+const preHandleSelectAgent = (agent) => {
+  selectMyAgentId.value = ''
+
+  handleSelectAgent(agent)
+}
+
 // 添加选中方法
 const handleSelectAgent = (_agent) => {
   if (_agent) {
     selectAgent.value = _agent
     selectAgentId.value = _agent.id
-    agent.value = _agent
   } else {
-    selectAgent.value = myAgent.value
-    selectAgentId.value = selectAgent.value.id
+    selectAgent.value = agentList.value[0]
+    selectAgentId.value = agentList.value[0].id
   }
 
   console.info('selectAgentId.value', selectAgentId.value)
 
   getSessionList()
+
+  handleSearchWeb(false)
 }
 
 async function getMessageList() {
@@ -549,6 +746,34 @@ async function handleDeleteSession(sessionId: string) {
   }
 }
 
+function handleMessage(event: any) {
+  // 你可以根据 event.origin 判断消息的来源是否是你信任的源
+  // 例如: if (event.origin !== "https://your-trusted-domain.com") return;
+
+  // 接收父窗口传递的数据
+  var receivedData = event.data
+
+  console.info(BASE_URL)
+  console.info(event.origin)
+  console.info('receivedData:', receivedData)
+  // 判断receivedData是否为JSON字符串
+  let isJsonString = false
+  try {
+    const json = JSON.parse(receivedData)
+
+    if (json.action === 'bindXSuccess') {
+      ElMessage({
+        type: 'success',
+        message: 'Bind X successfully',
+        customClass: 'dark-message',
+      })
+      location.reload()
+    }
+  } catch (e) {
+    isJsonString = false
+  }
+}
+
 // 添加更新会话名称的方法
 const handleUpdateSession = async () => {
   try {
@@ -572,26 +797,80 @@ const handleUpdateSession = async () => {
     console.error('Update session failed:', error)
   }
 }
+
+async function handleSearchWeb(message: boolean) {
+  options.value.enableAgent = message
+}
+
+function handleLogin() {
+  loginRef.value.show()
+}
+
+async function unbindX() {
+  try {
+    const confirmResult = await ElMessageBox.confirm('Are you sure you want to unbind X?', 'Warning', {
+      confirmButtonText: 'Confirm',
+      cancelButtonText: 'Cancel',
+      type: 'warning',
+      customClass: 'dark-message-box',
+      buttonSize: 'default',
+      confirmButtonClass: 'dark-confirm-button',
+      cancelButtonClass: 'dark-cancel-button',
+      draggable: true,
+      center: true,
+      roundButton: true,
+    })
+
+    if (confirmResult === 'confirm') {
+      await request({
+        url: BASE_URL + '/mgn/agent/unbindX',
+        method: 'GET',
+        params: {
+          sid: myAgent.value.sid,
+        },
+        headers: {
+          'X-Access-Token': token.value,
+        },
+      })
+      location.reload()
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage({
+        type: 'error',
+        message: 'Failed to unbind X',
+      })
+    }
+  }
+}
 </script>
 <template>
-  <div class="home-view">
+  <div class="home-view dark">
     <!-- LOGO部分调整到最左边 -->
-    <div class="w-full flex items-start px-4 py-3 border-b border-gray-700" @click="goHome">
-      <img src="../../assets/logo1.gif" style="width: 60px; height: 80px" loading="lazy" class="cursor-pointer ml-[100px]" alt="logo" />
+    <div class="w-full flex items-start px-4 py-3 border-b border-gray-700 fixed top-0 left-0 z-10">
+      <img @click="goHome" src="../../assets/logo1.gif" style="width: 60px; height: 80px" loading="lazy" class="cursor-pointer ml-[100px]" alt="logo" />
     </div>
 
     <!-- Entire chat panel -->
-    <div class="chat-panel" v-loading="loading">
+    <div class="chat-panel" style="margin-top: 100px" v-loading="loading">
       <!-- 将联系人列表移到最左边 -->
       <div class="contact-panel w-64 border-r border-gray-700 bg-[#1e1e1e] h-full">
         <!-- 其他内容添加padding -->
         <div class="p-4">
           <div class="text-white text-lg mb-4">My Agent</div>
           <div class="space-y-4 mb-6">
-            <div v-if="myAgent" class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors duration-200" :class="{ 'bg-gray-700': selectAgentId === myAgent.id }" @click="handleSelectAgent(selectAgentId === myAgent.id ? null : myAgent)">
-              <el-avatar :size="40" :src="myAgent.avatar" />
-              <div>
-                <div class="text-white text-sm">{{ myAgent.nickName }}</div>
+            <el-select v-if="myAgentList.length > 0" v-model="selectMyAgentId" clearable placeholder="Select an agent" @change="(val) => handleSelectAgent(myAgentList.find((a) => a.id === val))">
+              <el-option v-for="(myAgent, index) in myAgentList" :key="index" :label="myAgent.nickName" :value="myAgent.id" class="dark-option">
+                <div class="flex items-center space-x-3">
+                  <el-avatar :size="40" :src="myAgent.avatar" />
+                  <span class="text-sm text-white">{{ myAgent.nickName }}</span>
+                </div>
+              </el-option>
+            </el-select>
+
+            <div v-else>
+              <div class="flex items-center justify-center p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors duration-200">
+                <el-button @click="handleCreateMyAgent" round type="primary" class="w-full">Create My Agent</el-button>
               </div>
             </div>
           </div>
@@ -601,18 +880,15 @@ const handleUpdateSession = async () => {
           <div class="mb-4">
             <el-input v-model="searchQuery" placeholder="Search agents..." class="w-full" :prefix-icon="Search"></el-input>
           </div>
-          <div ref="contactListRef" class="h-[calc(80vh-80px)] overflow-y-auto custom-scrollbar" style="max-height: calc(90% - 120px)">
+          <div ref="contactListRef" class="h-[calc(75vh-80px)] overflow-y-auto custom-scrollbar" style="max-height: calc(90% - 120px)">
             <div class="space-y-2">
-              <div
-                v-for="agent in agentList"
-                :key="agent.id"
-                class="flex items-center space-x-3 p-2 bg-[#1e1e1e] hover:bg-[#2c2c2c] rounded-lg cursor-pointer transition-colors duration-200"
-                :class="{ 'bg-[#2c2c2c]': selectAgentId === agent.id }"
-                @click="handleSelectAgent(selectAgentId === agent.id ? null : agent)"
-              >
+              <div v-for="agent in agentList" :key="agent.id" class="flex items-center space-x-3 p-2 bg-[#1e1e1e] hover:bg-[#2c2c2c] rounded-lg cursor-pointer transition-colors duration-200" :class="{ 'bg-[#2c2c2c]': selectAgentId === agent.id }" @click="preHandleSelectAgent(agent)">
                 <el-avatar :size="40" :src="agent.avatar" />
                 <div>
-                  <div class="text-white text-sm">{{ agent.nickName }}</div>
+                  <div class="text-white text-sm flex items-center">
+                    {{ agent.nickName }}
+                    <img v-if="agent.xname" src="../../assets/x.svg" alt="X" class="w-4 h-4 ml-6 mt-2" />
+                  </div>
                 </div>
               </div>
 
@@ -633,7 +909,7 @@ const handleUpdateSession = async () => {
       <div class="session-panel w-64 border-r border-gray-700 bg-[#141414] p-4 h-full">
         <div class="button-wrapper mt-20">
           <div class="create-session-btn cursor-pointer flex flex-col items-center justify-center px-4 py-2 text-sm hover:bg-gray-700 rounded" @click="handleSessionCreate">
-            <img style="width: 30px" src="../../assets/create.png" class="create-icon" />
+            <img style="width: 30px" src="../../assets/create.png" alt="create" class="create-icon" />
           </div>
         </div>
 
@@ -642,14 +918,25 @@ const handleUpdateSession = async () => {
         </div>
 
         <div class="option-panel">
-          <el-form size="small" v-if="myAgent && myAgent.id">
-            <el-form-item label="RAG Knowledge">
-              <el-button class="ml-0" @click="showUploadEmbedding" type="primary">
-                <p style="color: white">Upload</p>
+          <el-form size="small" v-if="selectMyAgentId" class="rag-form">
+            <el-form-item label-width="8.2rem" label="RAG Knowledge" class="form-item-align">
+              <el-button class="ml-0" :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" @click="showUploadEmbedding">
+                <img style="width: 15px; height: 15px" src="../../assets/docUpload.svg" alt="upload" />
               </el-button>
             </el-form-item>
-            <el-form-item label="Enable Knowledge Base">
+            <el-form-item label="Enable Knowledge Base" class="form-item-align">
               <el-switch class="ml-0" v-model="options.enableVectorStore" style="--el-switch-on-color: #13ce66"></el-switch>
+            </el-form-item>
+            <el-form-item v-if="!myAgent || !myAgent.xname" label="Bind X" class="form-item-align">
+              <el-button class="ml-0" :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" @click="handleBindTwitter">
+                <img style="width: 15px; height: 15px" src="../../assets/bind.svg" alt="upload" />
+              </el-button>
+            </el-form-item>
+
+            <el-form-item v-else label="Unbind X" class="form-item-align">
+              <el-button class="ml-0" :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" @click="unbindX">
+                <img style="width: 15px; height: 15px" src="../../assets/unbind.svg" alt="upload" />
+              </el-button>
             </el-form-item>
           </el-form>
         </div>
@@ -661,11 +948,34 @@ const handleUpdateSession = async () => {
         <div class="header" v-if="activeSession">
           <div class="front">
             <!-- 显示当前选中agent的信息 -->
-            <div class="flex items-center" style="display: inline-flex">
-              <el-avatar :size="30" :src="selectAgent.avatar" class="mr-3" />
-              <span class="text-white text-base">{{ selectAgent.nickName }}</span>
+            <div class="flex flex-col">
+              <div class="flex items-center">
+                <el-avatar :size="30" :src="selectAgent.avatar" class="mr-3" />
+                <div class="flex flex-col ml-10">
+                  <div class="flex items-center">
+                    <span class="text-white text-base">{{ selectAgent.nickName }}</span>
+
+                    <el-link v-if="!selectAgent.xname" class="flex items-center transition-all duration-300 hover:scale-105 ml-5 mt-2" @click="handleShareTwitter(selectAgent.sid)" :underline="false">
+                      <el-icon size="18" class="text-blue-400 hover:text-blue-300 transition-colors duration-300">
+                        <Share />
+                      </el-icon>
+                    </el-link>
+                  </div>
+
+                  <div v-if="selectAgent.xname" class="mt-3 flex items-start rounded-lg transition-all duration-300 hover:bg-gray-700/10">
+                    <span class="text-gray-300 text-sm flex items-center group text-left">
+                      <img src="../../assets/x.svg" alt="X" class="w-4 h-4 mr-2 transition-transform duration-300 group-hover:scale-110 flex-shrink-0" />
+                      <a :href="`https://x.com/${selectAgent.xusername}`" target="_blank" class="font-medium truncate text-gray-400">@{{ selectAgent.xusername }}</a>
+                    </span>
+                    <el-link class="flex items-center transition-all duration-300 hover:scale-105 ml-5 mt-2" :underline="false" @click="handleShareTwitter(selectAgent.sid)">
+                      <el-icon size="18" class="text-blue-400 hover:text-blue-300 transition-colors duration-300">
+                        <Share />
+                      </el-icon>
+                    </el-link>
+                  </div>
+                </div>
+              </div>
             </div>
-            <!-- <div class="description">{{ activeSession.messageCount }} messages</div> -->
           </div>
           <!-- Edit buttons at end -->
           <div class="flex items-center">
@@ -692,14 +1002,14 @@ const handleUpdateSession = async () => {
         <el-divider :border-style="'solid'" border-color="#666666" />
         <div ref="messageListRef" class="message-list">
           <!-- Transition effect -->
-          <transition-group name="list" v-if="activeSession && agent">
-            <message-row v-for="message in messageList" :agent-avatar="message.avatar" :avatar="loginUser.avatar || user" :key="message.id" :message="message"></message-row>
+          <transition-group name="list" v-if="activeSession && selectAgent">
+            <message-row v-for="message in messageList" :agent-avatar="message.avatar" :avatar="loginUser && loginUser.avatar ? loginUser.avatar : user" :key="message.id" :message="message"></message-row>
           </transition-group>
         </div>
         <!-- Listen for send event -->
-        <message-input @send="handleSendMessage" v-if="activeSession"></message-input>
+        <message-input @send="preHandleSendMessage" :loading="sendLoading" @search="handleSearchWeb" :functionStatus="selectAgent.functionStatus" v-if="activeSession && selectAgent"></message-input>
 
-        <el-dropdown v-if="loginUser" class="bg-[#303133] rounded-full fixed top-2 right-25 h-7 w-40 mt-20">
+        <el-dropdown v-if="loginUser" class="bg-[#303133] rounded-full fixed top-2 right-25 h-7 w-40 mt-20 z-50">
           <span class="el-dropdown-link mt-[-5px] flex items-center">
             <el-avatar :size="16" :src="loginUser.avatar" style="border: none" />
 
@@ -739,6 +1049,11 @@ const handleUpdateSession = async () => {
             </el-card>
           </template>
         </el-dropdown>
+        <div v-else class="bg-[#303133] rounded-full fixed top-2 text-white right-25 h-7 w-40 mt-20 z-50 flex items-center justify-center cursor-pointer" @click="handleLogin">
+          <el-avatar :size="16" :src="user" style="border: none" />
+          <span class="ml-1.25 text-white"> Login In </span>
+        </div>
+
         <Login ref="loginRef" />
 
         <UploadEmbedding ref="uploadEmbeddingRef"></UploadEmbedding>
@@ -865,15 +1180,17 @@ const handleUpdateSession = async () => {
   flex-direction: column;
   align-items: stretch;
   justify-content: center;
+  overflow: hidden;
 
   .chat-panel {
     margin: 0 auto;
     width: 90%;
     display: flex;
     background-color: #1e1e1e;
-    height: 90%;
+    height: 90vh;
     box-shadow: 0 0 10px rgba(black, 0.1);
     border-radius: 10px;
+    overflow: hidden;
 
     .session-panel {
       display: flex;
@@ -884,6 +1201,7 @@ const handleUpdateSession = async () => {
       border-right: 1px solid rgba(255, 255, 255, 0.07);
       background-color: #141414;
       height: 100%;
+      overflow: hidden;
       /* Title */
       .title {
         margin-top: 20px;
@@ -1044,6 +1362,145 @@ const handleUpdateSession = async () => {
 
     &::placeholder {
       color: #606266;
+    }
+  }
+}
+
+.rag-form {
+  :deep(.form-item-align) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .el-form-item__label {
+      justify-content: flex-start;
+    }
+
+    .el-form-item__content {
+      margin-left: auto !important;
+      justify-content: flex-end;
+    }
+  }
+}
+
+:deep(.el-select) {
+  .el-input__wrapper {
+    background-color: #1e1e1e !important;
+    box-shadow: 0 0 0 1px #303133 inset;
+
+    &:hover {
+      box-shadow: 0 0 0 1px #409eff inset;
+    }
+
+    &.is-focus {
+      box-shadow: 0 0 0 1px #409eff inset;
+    }
+  }
+
+  .el-input__inner {
+    color: #ffffff !important;
+
+    &::placeholder {
+      color: #606266;
+    }
+  }
+}
+
+:deep(.el-select-dropdown) {
+  background-color: #1e1e1e !important;
+  border: 1px solid #303133;
+
+  .el-select-dropdown__item {
+    color: #ffffff;
+
+    &:hover {
+      background-color: #2c2c2c;
+    }
+
+    &.selected {
+      color: #409eff;
+      background-color: #2c2c2c;
+    }
+  }
+}
+
+.dark-select {
+  .el-input__wrapper {
+    background-color: #1e1e1e !important;
+    box-shadow: 0 0 0 1px #303133 inset;
+
+    &:hover {
+      box-shadow: 0 0 0 1px #409eff inset;
+    }
+
+    &.is-focus {
+      box-shadow: 0 0 0 1px #409eff inset;
+    }
+  }
+
+  .el-input__inner {
+    color: #ffffff !important;
+
+    &::placeholder {
+      color: #606266;
+    }
+  }
+}
+
+:deep(.dark-option) {
+  background-color: #1e1e1e !important;
+  color: #ffffff !important;
+
+  &:hover {
+    background-color: #2c2c2c !important;
+  }
+
+  &.selected {
+    color: #409eff !important;
+    background-color: #2c2c2c !important;
+  }
+}
+
+// 添加全局暗黑模式样式
+:deep(.dark) {
+  .el-select {
+    .el-input__wrapper {
+      background-color: #1e1e1e !important;
+      box-shadow: 0 0 0 1px #303133 inset;
+
+      &:hover {
+        box-shadow: 0 0 0 1px #409eff inset;
+      }
+
+      &.is-focus {
+        box-shadow: 0 0 0 1px #409eff inset;
+      }
+    }
+
+    .el-input__inner {
+      color: #ffffff !important;
+
+      &::placeholder {
+        color: #606266;
+      }
+    }
+  }
+
+  .el-select-dropdown {
+    background-color: #1e1e1e !important;
+    border: 1px solid #303133;
+
+    .el-select-dropdown__item {
+      color: #ffffff;
+
+      &:hover {
+        background-color: #2c2c2c;
+      }
+
+      &.selected {
+        color: #409eff;
+        background-color: #2c2c2c;
+      }
     }
   }
 }

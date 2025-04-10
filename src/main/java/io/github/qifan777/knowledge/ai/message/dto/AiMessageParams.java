@@ -7,4 +7,6 @@ public class AiMessageParams {
   Boolean enableVectorStore = true;
   Boolean enableAgent;
   String userId;
+  String baseUrl;
+  String model;
 }
