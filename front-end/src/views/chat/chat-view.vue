@@ -613,13 +613,13 @@ function goUser() {
 }
 
 function showUploadEmbedding() {
-  uploadEmbeddingRef.value?.show(myAgent.value.id)
+  uploadEmbeddingRef.value?.show(selectAgent.value.id)
 }
 
 const handleBindTwitter = () => {
   const data = {
     token: token.value,
-    id: myAgent.value.sid,
+    id: selectAgent.value.sid,
     type: '1',
   }
 
@@ -826,7 +826,7 @@ async function unbindX() {
         url: BASE_URL + '/mgn/agent/unbindX',
         method: 'GET',
         params: {
-          sid: myAgent.value.sid,
+          sid: selectAgent.value.sid,
         },
         headers: {
           'X-Access-Token': token.value,
@@ -927,7 +927,7 @@ async function unbindX() {
             <el-form-item label="Enable Knowledge Base" class="form-item-align">
               <el-switch class="ml-0" v-model="options.enableVectorStore" style="--el-switch-on-color: #13ce66"></el-switch>
             </el-form-item>
-            <el-form-item v-if="!myAgent || !myAgent.xname" label="Bind X" class="form-item-align">
+            <el-form-item v-if="!selectAgent || !selectAgent.xname" label="Bind X" class="form-item-align">
               <el-button class="ml-0" :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" @click="handleBindTwitter">
                 <img style="width: 15px; height: 15px" src="../../assets/bind.svg" alt="upload" />
               </el-button>
