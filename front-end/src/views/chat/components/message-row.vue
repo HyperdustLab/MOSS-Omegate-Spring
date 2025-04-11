@@ -33,7 +33,7 @@ const images = computed(() => {
         <!-- If message is text, display as markdown -->
         <markdown-message :type="message.type" :message="message.textContent" v-if="message.textContent"></markdown-message>
         <!-- If message content is image, display image -->
-        <el-image v-for="image in images" :key="image" class="image" fit="cover" :preview-src-list="images" :src="image"></el-image>
+        <el-image v-for="image in images" :key="image" class="image" fit="cover" style="width: 50%; height: 50%" :preview-src-list="images" :src="image"></el-image>
         <!-- If message content is empty show loading animation -->
         <TextLoading v-if="!message.textContent && !images.length" style="color: white"></TextLoading>
       </div>
@@ -79,7 +79,6 @@ const images = computed(() => {
       font-size: 15px;
       padding: 1.5px;
       // Limit maximum width of message display
-      max-width: 800px;
       // More rounded corners
       border-radius: 7px;
       // Add border to message box to make it look more solid, otherwise too flat and light
