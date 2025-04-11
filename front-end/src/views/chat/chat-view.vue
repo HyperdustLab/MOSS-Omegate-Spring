@@ -67,34 +67,73 @@ const selectMyAgentId = ref('')
 const lastProcessedTime = ref(0)
 const isProcessing = ref(false)
 
+const reasoningRecord = ref(null)
+
 const wsUrl = BASE_URL.replace('http', 'ws').replace('https', 'wss') + '/ws/app/websocket/' + wsUserId
 
 const { status, data, send, open, close } = useWebSocket(wsUrl, {
   autoReconnect: true,
-  onMessage: (ws, event) => {
+  onMessage: async (ws, event) => {
     console.info('event', event)
     try {
       const currentTime = Date.now()
       // Only process if more than 10 seconds have passed since last processing
-      if (currentTime - lastProcessedTime.value < 10000 || isProcessing.value) {
+      if (currentTime - lastProcessedTime.value < 3000 || isProcessing.value) {
         console.log('Message ignored due to rate limiting')
         return
       }
 
       const msg = JSON.parse(event.data)
-      if (msg.action === 'callbackAutoReplyTweetsMedia' && msg.data.replyTweetsRecordId === wsUserId) {
-        isProcessing.value = true
-        lastProcessedTime.value = currentTime
 
-        const text = inputText.value
-        inputReplyMediaFileUrls.value = msg.data.replyMediaFileUrls
-        inputTextReplyStatus.value = true
-        inputText.value = msg.data.tweets
-        sendLoading.value = true
+      if (msg.data.replyTweetsRecordId !== wsUserId) {
+        console.log('msg.data.replyTweetsRecordId', msg.data.replyTweetsRecordId)
+        console.log('wsUserId', wsUserId)
+        return
+      }
 
-        handleSendMessage({ text: text, inputText: inputText.value, image: '', mediaFileUrls: inputReplyMediaFileUrls.value }).finally(() => {
-          isProcessing.value = false
-        })
+      const text = inputText.value
+
+      switch (msg.action) {
+        case 'callbackAutoReplyTweetsMedia':
+          isProcessing.value = true
+          lastProcessedTime.value = currentTime
+          inputReplyMediaFileUrls.value = msg.data.replyMediaFileUrls
+          inputText.value = msg.data.tweets
+          sendLoading.value = true
+          console.log('inputTextReplyStatus.value', inputTextReplyStatus.value)
+
+          if (!inputTextReplyStatus.value) {
+            inputTextReplyStatus.value = true
+
+            if (inputReplyMediaFileUrls.value.length > 0) {
+              messageList.value[messageList.value.length - 1].medias = inputReplyMediaFileUrls.value.map((url) => ({ type: 'image', data: url }))
+            }
+
+            console.log('messageList.value[messageList.value.length - 1]', messageList.value[messageList.value.length - 1])
+
+            reasoningRecord.value.inputReplyMediaFileUrls = inputReplyMediaFileUrls.value
+
+            await saveMessage(chatMessage.value)
+            await saveMessage(responseMessage.value)
+
+            await addReasoningRecord(reasoningRecord.value)
+
+            isProcessing.value = false
+            sendLoading.value = false
+          }
+
+          break
+        case 'callbackAutoReplyTweetsText':
+          isProcessing.value = true
+          lastProcessedTime.value = currentTime
+          inputTextReplyStatus.value = true
+          inputText.value = msg.data.tweets
+          sendLoading.value = true
+
+          handleSendMessage({ text: text, inputText: inputText.value, image: '' }).finally(() => {
+            isProcessing.value = false
+          })
+          break
       }
     } catch (error) {
       console.error('error', error)
@@ -205,6 +244,14 @@ const responseMessage = ref<AiMessage>({
   sessionId: '',
 })
 
+const chatMessage = ref<AiMessage>({
+  id: new Date().getTime().toString(),
+  type: 'USER',
+  medias: [],
+  textContent: '',
+  sessionId: '',
+})
+
 async function getDefaultContent() {
   const { result } = await request({
     url: BASE_URL + '/mgn/agentNpc/list',
@@ -276,18 +323,19 @@ function handleSelectSession(session) {
 }
 
 const preHandleSendMessage = async (message: { text: string; image: string }) => {
+  inputTextReplyStatus.value = false
   sendLoading.value = true
   inputText.value = message.text
 
   const msg = {
-    action: 'autoReplyTweetsMedia',
+    action: 'autoReplyTweetsText',
     data: {
       replyTweetsRecordId: wsUserId,
       tweets: inputText.value,
     },
   }
 
-  const chatMessage = {
+  chatMessage.value = {
     aiSessionId: activeSession.value.id,
     sessionId: activeSession.value.id,
     medias: null,
@@ -299,10 +347,10 @@ const preHandleSendMessage = async (message: { text: string; image: string }) =>
     editorId: loginUser.value?.id || currSessionId.value,
   }
 
-  messageList.value.push(chatMessage)
+  messageList.value.push(chatMessage.value)
 
   if (options.value.enableAgent) {
-    handleSendMessage({ text: message.text, inputText: message.text, image: '', mediaFileUrls: [] })
+    handleSendMessage({ text: message.text, inputText: message.text, image: '' })
   } else {
     await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
       userId: selectAgent.value.owner,
@@ -312,13 +360,13 @@ const preHandleSendMessage = async (message: { text: string; image: string }) =>
     setTimeout(() => {
       console.info('inputTextReplyStatus.value', inputTextReplyStatus.value)
       if (!inputTextReplyStatus.value) {
-        handleSendMessage({ text: message.text, inputText: message.text, image: '', mediaFileUrls: inputReplyMediaFileUrls.value })
+        handleSendMessage({ text: message.text, inputText: message.text, image: '' })
       }
     }, 10 * 1000)
   }
 }
 
-const handleSendMessage = async (message: { text: string; inputText: string; image: string; mediaFileUrls: string[] }) => {
+const handleSendMessage = async (message: { text: string; inputText: string; image: string }) => {
   if (!activeSession.value) {
     ElMessage.warning('Please create a session')
     return
@@ -328,18 +376,6 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
   const medias: AiMessage['medias'] = []
   if (message.image) {
     medias.push({ type: 'image', data: message.image })
-  }
-
-  const chatMessage = {
-    aiSessionId: activeSession.value.id,
-    sessionId: activeSession.value.id,
-    medias,
-    textContent: message.inputText,
-    type: 'USER',
-    avatar: loginUser.value?.avatar,
-    name: loginUser.value?.walletAddress || 'Guest',
-    creatorId: loginUser.value?.id || currSessionId.value,
-    editorId: loginUser.value?.id || currSessionId.value,
   }
 
   responseMessage.value = {
@@ -387,7 +423,7 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
 
   options.value.baseUrl = `http://${res.result.ip}:${res.result.port}`
 
-  const body: AiMessageWrapper = { message: chatMessage, params: options.value }
+  const body: AiMessageWrapper = { message: chatMessage.value, params: options.value }
 
   form.set('input', JSON.stringify(body))
 
@@ -424,18 +460,14 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
       })
     }
     if (finishReason && finishReason.toLowerCase() == 'stop') {
-      sendLoading.value = false
       evtSource.close()
 
-      chatMessage.textContent = message.text
-      if (message.mediaFileUrls) {
-        responseMessage.value.medias = message.mediaFileUrls.map((url) => ({ type: 'image', data: url }))
-      }
+      chatMessage.value.textContent = message.text
+      // if (message.mediaFileUrls) {
+      //   responseMessage.value.medias = message.mediaFileUrls.map((url) => ({ type: 'image', data: url }))
+      // }
 
-      await saveMessage(chatMessage)
-      await saveMessage(responseMessage.value)
-
-      await addReasoningRecord({
+      reasoningRecord.value = {
         inputContent: message.inputText,
         outContent: responseMessage.value.textContent,
         agentId: selectAgent.value.sid,
@@ -444,7 +476,46 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
         systemContent: content,
         remark: options.value.baseUrl,
         nodeId: res.result.minerNodeId,
-      })
+      }
+
+      inputTextReplyStatus.value = false
+
+      if (options.value.enableAgent) {
+        sendLoading.value = false
+        await saveMessage(chatMessage.value)
+        await saveMessage(responseMessage.value)
+
+        await addReasoningRecord(reasoningRecord.value)
+
+        inputTextReplyStatus.value = true
+      } else {
+        const msg = {
+          action: 'autoReplyTweetsMedia',
+          data: {
+            replyTweetsRecordId: wsUserId,
+            tweets: inputText.value,
+            replyTweetsName: responseMessage.value.textContent,
+            avatar: selectAgent.value.avatar,
+          },
+        }
+        await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
+          userId: selectAgent.value.owner,
+          msg: JSON.stringify(msg),
+        })
+
+        setTimeout(async () => {
+          if (!inputTextReplyStatus.value) {
+            inputTextReplyStatus.value = true
+            isProcessing.value = false
+            await saveMessage(chatMessage.value)
+            await saveMessage(responseMessage.value)
+
+            await addReasoningRecord(reasoningRecord.value)
+
+            sendLoading.value = false
+          }
+        }, 10 * 1000)
+      }
     }
   })
 
