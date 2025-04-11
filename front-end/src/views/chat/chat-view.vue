@@ -522,7 +522,7 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
 
             sendLoading.value = false
           }
-        }, 10 * 1000)
+        }, 30 * 1000)
       }
     }
   })
