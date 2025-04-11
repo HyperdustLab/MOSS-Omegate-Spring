@@ -151,6 +151,7 @@ const myAgentList = ref([])
 const messageList = ref([])
 
 const showSessionEdit = ref(false)
+const isSessionPanelCollapsed = ref(true)
 
 const token = ref(localStorage.getItem('X-Token'))
 
@@ -350,6 +351,16 @@ const preHandleSendMessage = async (message: { text: string; image: string }) =>
   }
 
   messageList.value.push(chatMessage.value)
+
+  // 确保在下一个 tick 时滚动到底部
+  await nextTick(() => {
+    if (messageListRef.value) {
+      messageListRef.value.scrollTo({
+        top: messageListRef.value.scrollHeight,
+        behavior: 'smooth',
+      })
+    }
+  })
 
   if (options.value.enableAgent) {
     handleSendMessage({ text: message.text, inputText: message.text, image: '' })
@@ -922,6 +933,10 @@ async function unbindX() {
     }
   }
 }
+
+const toggleSessionPanel = () => {
+  isSessionPanelCollapsed.value = !isSessionPanelCollapsed.value
+}
 </script>
 <template>
   <div class="home-view dark">
@@ -985,18 +1000,25 @@ async function unbindX() {
       </div>
 
       <!-- 会话列表面板 -->
-      <div class="session-panel w-64 border-r border-gray-700 bg-[#141414] p-4 h-full">
+      <div class="session-panel" :class="{ collapsed: isSessionPanelCollapsed }">
         <div class="button-wrapper mt-20">
-          <div class="create-session-btn cursor-pointer flex flex-col items-center justify-center px-4 py-2 text-sm hover:bg-gray-700 rounded" @click="handleSessionCreate">
-            <img style="width: 30px" src="../../assets/create.png" alt="create" class="create-icon" />
+          <div class="flex items-center space-x-2">
+            <div class="create-session-btn cursor-pointer flex items-center justify-center px-4 py-2 text-sm hover:bg-gray-700 rounded" @click="handleSessionCreate">
+              <img style="width: 30px" src="../../assets/create.png" alt="create" class="create-icon" />
+            </div>
+            <div class="toggle-panel-btn cursor-pointer flex items-center justify-center px-4 py-2 text-sm hover:bg-gray-700 rounded" @click="toggleSessionPanel">
+              <el-icon :size="20" style="color: white">
+                <component :is="isSessionPanelCollapsed ? 'ArrowRight' : 'ArrowLeft'" />
+              </el-icon>
+            </div>
           </div>
         </div>
 
-        <div class="session-list h-[calc(80vh-80px)] overflow-y-auto custom-scrollbar" v-if="activeSession">
+        <div class="session-list h-[calc(80vh-80px)] overflow-y-auto custom-scrollbar" v-if="activeSession && !isSessionPanelCollapsed">
           <session-item v-for="session in sessionList" :key="session.id" :active="session.id === activeSession.id" :session="session" class="session" @click="handleSelectSession(session)" @delete="handleDeleteSession(session.id)" />
         </div>
 
-        <div class="option-panel">
+        <div class="option-panel" v-if="!isSessionPanelCollapsed">
           <el-form size="small" v-if="selectMyAgentId" class="rag-form">
             <el-form-item label-width="8.2rem" label="RAG Knowledge" class="form-item-align">
               <el-button class="ml-0" :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" @click="showUploadEmbedding">
@@ -1281,11 +1303,36 @@ async function unbindX() {
       background-color: #141414;
       height: 100%;
       overflow: hidden;
-      /* Title */
-      .title {
-        margin-top: 20px;
-        font-size: 20px;
-        color: #ffffff;
+      width: 64px;
+      transition: width 0.3s ease;
+
+      &.collapsed {
+        width: 64px;
+      }
+
+      &:not(.collapsed) {
+        width: 256px;
+      }
+
+      .button-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .toggle-panel-btn {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
       }
 
       .session-list {
@@ -1300,22 +1347,6 @@ async function unbindX() {
 
         .session:first-child {
           margin-top: 0;
-        }
-      }
-
-      .button-wrapper {
-        /* entity-panel is relative layout, button-wrapper is absolute relative to it */
-        bottom: 20px;
-        left: 0;
-        display: flex;
-        /* Show buttons on right */
-        justify-content: flex-end;
-        /* Same width as session-panel */
-        width: 100%;
-
-        /* Leave space between button and right edge */
-        .new-session {
-          margin-right: 20px;
         }
       }
     }
