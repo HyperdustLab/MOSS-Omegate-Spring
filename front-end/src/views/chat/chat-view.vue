@@ -188,6 +188,8 @@ const sid = route.query.sid
 
 const defaultContent = ref(null)
 
+const defAvatar = ref('https://s3.hyperdust.io/upload/20250411/67f8cbcbe4b0bc355fbb060e.png')
+
 const options = ref<AiMessageParams>({
   enableVectorStore: false,
   enableAgent: false,
@@ -478,6 +480,12 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
         nodeId: res.result.minerNodeId,
       }
 
+      let avatar = loginUser.value ? loginUser.value.avatar : ''
+
+      if (!avatar) {
+        avatar = defAvatar.value
+      }
+
       inputTextReplyStatus.value = false
 
       if (options.value.enableAgent) {
@@ -495,7 +503,7 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
             replyTweetsRecordId: wsUserId,
             tweets: inputText.value,
             replyTweetsName: responseMessage.value.textContent,
-            avatar: selectAgent.value.avatar,
+            avatar: avatar,
           },
         }
         await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
