@@ -512,8 +512,9 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
           action: 'autoReplyTweetsMedia',
           data: {
             replyTweetsRecordId: wsUserId,
-            tweets: inputText.value,
-            replyTweetsName: responseMessage.value.textContent,
+            tweets: chatMessage.value.textContent,
+            replyTweets: responseMessage.value.textContent,
+            replyTweetsName: selectAgent.value.xusername,
             avatar: avatar,
           },
         }
@@ -1004,7 +1005,7 @@ const toggleSessionPanel = () => {
         <div class="button-wrapper mt-20">
           <div class="flex items-center space-x-2">
             <div class="create-session-btn cursor-pointer flex items-center justify-center px-4 py-2 text-sm hover:bg-gray-700 rounded" @click="handleSessionCreate">
-              <img style="width: 30px" src="../../assets/create.png" alt="create" class="create-icon" />
+              <img src="../../assets/create.png" alt="create" class="create-icon w-5 h-5" />
             </div>
             <div class="toggle-panel-btn cursor-pointer flex items-center justify-center px-4 py-2 text-sm hover:bg-gray-700 rounded" @click="toggleSessionPanel">
               <el-icon :size="20" style="color: white">
