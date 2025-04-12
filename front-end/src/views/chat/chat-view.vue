@@ -514,7 +514,7 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
             replyTweetsRecordId: wsUserId,
             tweets: chatMessage.value.textContent,
             replyTweets: responseMessage.value.textContent,
-            replyTweetsName: selectAgent.value.xusername,
+            replyTweetsName: selectAgent.value.xusername || selectAgent.value.nickName,
             avatar: avatar,
           },
         }
