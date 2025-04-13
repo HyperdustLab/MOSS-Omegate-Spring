@@ -943,7 +943,10 @@ const toggleSessionPanel = () => {
   <div class="home-view dark">
     <!-- LOGO部分调整到最左边 -->
     <div class="w-full flex items-start px-4 py-3 border-b border-gray-700 fixed top-0 left-0 z-10">
-      <img @click="goHome" src="../../assets/logo1.gif" style="width: 60px; height: 80px" loading="lazy" class="cursor-pointer ml-[100px]" alt="logo" />
+      <div @click="goHome" class="flex items-center cursor-pointer">
+        <img src="../../assets/logo2.png" style="width: 5rem; height: 5rem" loading="lazy" class="cursor-pointer ml-[100px]" alt="logo" />
+        <span class="text-white text-2xl font-bold ml-4">MOSS&nbsp;AI</span>
+      </div>
     </div>
 
     <!-- Entire chat panel -->
