@@ -13,10 +13,14 @@ const props = defineProps<{
   defAgentAvatar: string
 }>()
 
+const userAvatar = 'https://s3.hyperdust.io/upload/20250411/67f8cbcbe4b0bc355fbb060e.png'
+
+const agentAvatar = 'https://s3.hyperdust.io/upload/20250416/67ff421d5bce8066f1e25655.jpg'
+
 const isUser = computed(() => props.message.type === 'USER')
 
 const avatar = computed(() => {
-  return isUser.value ? '/src/assets/user.png' : props.defAgentAvatar || '/src/assets/logo1.jpg'
+  return isUser.value ? userAvatar : props.defAgentAvatar || agentAvatar
 })
 
 const images = computed(() => {
