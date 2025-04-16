@@ -28,12 +28,8 @@ const handleDeleteSession = () => {
     <div class="mask"></div>
     <!-- Show delete button on hover -->
     <div class="btn-wrapper">
-      <el-icon :size="15" class="close">
-        <el-popconfirm title="Are you sure you want to permanently delete this chat session?" @confirm="handleDeleteSession">
-          <template #reference>
-            <CircleClose />
-          </template>
-        </el-popconfirm>
+      <el-icon :size="15" class="close" @click="handleDeleteSession">
+        <CircleClose />
       </el-icon>
     </div>
   </div>
@@ -54,7 +50,7 @@ const handleDeleteSession = () => {
   /* Relative parent for absolute child positioning */
   position: relative;
   /* Hide overflow for mask animation */
-  overflow: hidden;
+  overflow: visible;
 
   .name {
     /* Larger font for session name */
@@ -134,6 +130,18 @@ const handleDeleteSession = () => {
     right: -20px;
     z-index: 10;
     opacity: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 50%;
+
+    &:hover {
+      color: white;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
 
     .edit {
       margin-right: 5px;

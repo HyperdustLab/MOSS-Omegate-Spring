@@ -47,8 +47,16 @@ const uploadToggleButton = () => {
 <template>
   <div class="message-input">
     <div class="input-wrapper">
-      <!-- Press enter to send, input box height is 3 lines -->
-      <el-input v-model="message.text" :autosize="false" :rows="3" class="input" resize="none" type="textarea" @keydown.enter.prevent="sendMessage"> </el-input>
+      <div class="input-container">
+        <!-- Press enter to send, input box height is 3 lines -->
+        <el-input v-model="message.text" :autosize="false" :rows="2" class="input" resize="none" type="textarea" @keydown.enter.prevent="sendMessage"> </el-input>
+        <el-button :loading="props.loading" round type="primary" class="send-button" @click="sendMessage">
+          <el-icon class="el-icon--left">
+            <Position />
+          </el-icon>
+          Send
+        </el-button>
+      </div>
 
       <div class="mt-10">
         <div style="display: flex; align-items: center">
@@ -59,14 +67,6 @@ const uploadToggleButton = () => {
           </el-button>
         </div>
       </div>
-      <div class="button-wrapper">
-        <el-button :loading="props.loading" round type="primary" @click="sendMessage">
-          <el-icon class="el-icon--left">
-            <Position />
-          </el-icon>
-          Send
-        </el-button>
-      </div>
     </div>
   </div>
 </template>
@@ -74,12 +74,14 @@ const uploadToggleButton = () => {
 <style lang="scss" scoped>
 .message-input {
   padding: 20px 20px 0 20px;
+  height: 7rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   border-top-right-radius: 5px;
   border-top-left-radius: 5px;
   background-color: #1e1e1e;
+  margin-bottom: 10px;
   .el-form-item {
     align-items: center;
   }
@@ -89,12 +91,27 @@ const uploadToggleButton = () => {
     border-color: rgba(255, 255, 255, 0.1);
     color: #ffffff;
     box-shadow: 0 0 0 1px #282c34 inset;
+    padding-right: 120px;
+    padding-bottom: 50px;
 
     &:hover,
     &:focus {
       border-color: #409eff;
     }
   }
+}
+
+.input-container {
+  position: relative;
+  width: 100%;
+}
+
+.send-button {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  height: 32px;
+  z-index: 1;
 }
 
 .button-wrapper {

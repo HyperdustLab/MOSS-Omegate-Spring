@@ -1,42 +1,95 @@
-<script lang="tsx" setup>
+<script lang="ts" setup>
+import { Picture, Warning, Share } from '@element-plus/icons-vue'
+import { computed, ref } from 'vue'
 import TextLoading from './text-loading.vue'
-import logo from '@/assets/logo1.jpg'
 import MarkdownMessage from './markdown-message.vue'
 import type { AiMessage } from '../store/chat-store'
-import { computed } from 'vue'
-// message: Accepts message object, displays message content and avatar, and adjusts message position based on role.
-// avatar: User avatar, if role is Assistant then use logo.
+
+const BASE_URL = import.meta.env.VITE_API_HYPERAGI_API
+const downloading = ref(false)
+
 const props = defineProps<{
   message: AiMessage
-  avatar?: string
-  agentAvatar?: string
+  defAgentAvatar: string
 }>()
 
-const images = computed(() => {
-  const medias = props.message.medias || []
-  return medias.filter((media) => media.type === 'image').map((media) => media.data)
+const isUser = computed(() => props.message.type === 'USER')
+
+const avatar = computed(() => {
+  return isUser.value ? '/src/assets/user.png' : props.defAgentAvatar || '/src/assets/logo1.jpg'
 })
+
+const images = computed(() => {
+  if (!props.message.medias) return []
+  return props.message.medias.filter((media) => media.type === 'image').map((media) => media.data)
+})
+
+const handleDownload = async (imageUrl: string) => {
+  try {
+    downloading.value = true
+    const objectId = imageUrl.replace('https://s3.hyperdust.io/', '')
+
+    // 获取图片数据
+    const response = await fetch(BASE_URL + '/sys/common/download?objectId=' + objectId)
+    const blob = await response.blob()
+
+    // 创建下载链接
+    const link = document.createElement('a')
+    const url = window.URL.createObjectURL(blob)
+    link.href = url
+
+    // 设置下载文件名
+    const fileName = imageUrl.split('/').pop() || 'image.png'
+    link.download = fileName
+
+    // 添加到文档中并触发下载
+    document.body.appendChild(link)
+    link.click()
+
+    // 清理
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Download failed:', error)
+  } finally {
+    downloading.value = false
+  }
+}
 </script>
 
-<!-- The entire div is used to adjust the position of internal messages, each message takes up a full row, then adjusts internal messages to right or left based on right/left class -->
 <template>
-  <div :class="['message-row', message.type === 'USER' ? 'right' : 'left']">
-    <!-- Message display, divided into top and bottom, avatar on top, message below -->
-    <div class="row">
-      <!-- Avatar -->
-      <div class="avatar-wrapper">
-        <el-avatar :src="avatar" class="avatar" shape="circle" v-if="message.type === 'USER'" />
-        <el-avatar :src="agentAvatar || logo" class="avatar" shape="circle" v-else />
+  <div class="message-row" :class="{ 'message-row-user': isUser }">
+    <div class="avatar">
+      <el-avatar :size="40" :src="message.avatar || avatar" />
+    </div>
+    <div class="message-content">
+      <div class="message-text" v-html="message.textContent"></div>
+      <div class="image-container" v-if="images && images.length > 0">
+        <div v-for="(image, index) in images" :key="index" class="image-wrapper">
+          <el-image class="image" fit="cover" style="width: 50%; height: 50%" :preview-src-list="images" :src="image">
+            <template #placeholder>
+              <div class="image-placeholder">
+                <el-icon><Picture /></el-icon>
+              </div>
+            </template>
+            <template #error>
+              <div class="image-error">
+                <el-icon><Warning /></el-icon>
+              </div>
+            </template>
+          </el-image>
+          <div class="image-actions">
+            <el-button size="small" type="primary" :loading="downloading" @click="handleDownload(image)">
+              <template #icon>
+                <el-icon><Share /></el-icon>
+              </template>
+              <span>Download & Share</span>
+            </el-button>
+          </div>
+        </div>
       </div>
-      <!-- Sent message or reply message -->
-      <div class="message">
-        <!-- If message is text, display as markdown -->
-        <markdown-message :type="message.type" :message="message.textContent" v-if="message.textContent"></markdown-message>
-        <!-- If message content is image, display image -->
-        <el-image v-for="image in images" :key="image" class="image" fit="cover" style="width: 50%; height: 50%" :preview-src-list="images" :src="image"></el-image>
-        <!-- If message content is empty show loading animation -->
-        <TextLoading v-if="!message.textContent && !images.length" style="color: white"></TextLoading>
-      </div>
+
+      <TextLoading v-if="!message.textContent && !images.length" style="color: white"></TextLoading>
     </div>
   </div>
 </template>
@@ -44,70 +97,63 @@ const images = computed(() => {
 <style lang="scss" scoped>
 .message-row {
   display: flex;
+  margin-bottom: 20px;
+  padding: 0 20px;
 
-  &.right {
-    // Message displays on right side
-    justify-content: flex-end;
-
-    .row {
-      // Avatar also aligns to right
-      .avatar-wrapper {
-        display: flex;
-        justify-content: flex-end;
-      }
-
-      // Distinguish background color between user replies and ChatGPT replies
-      .message {
-        background-color: #1e1e1e;
-        :deep(.md-editor) {
-          background-color: #1e1e1e;
-        }
-      }
-    }
+  &.message-row-user {
+    flex-direction: row-reverse;
   }
 
-  // Default left alignment
-  .row {
-    .avatar-wrapper {
-      .avatar {
-        box-shadow: 20px 20px 20px 3px rgba(0, 0, 0, 0.01);
-        margin-bottom: 20px;
-      }
-    }
+  .avatar {
+    margin: 0 10px;
+  }
 
-    .message {
-      font-size: 15px;
-      padding: 1.5px;
-      // Limit maximum width of message display
-      // More rounded corners
-      border-radius: 7px;
-      // Add border to message box to make it look more solid, otherwise too flat and light
+  .message-content {
+    max-width: 70%;
+    background-color: #2b2b2b;
+    padding: 10px 15px;
+    border-radius: 10px;
+    color: white;
+  }
+}
 
-      // Background color
-      background-color: #1a1a1a;
+.image-container {
+  position: relative;
+  display: inline-block;
+  margin-top: 10px;
+}
 
-      color: #ffffff;
+.image-wrapper {
+  position: relative;
+  display: inline-block;
+  margin-top: 10px;
+}
 
-      .image {
-        width: 600px;
-        height: 600px;
-      }
+.image-actions {
+  position: absolute;
+  bottom: 10px;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.3s;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px;
+  border-radius: 4px;
 
-      &.user {
-        background-color: #213d5b;
-      }
+  .el-button {
+    background-color: transparent;
+    border: none;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 
-      :deep(.custom-markdown) {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        line-height: 1.8;
-
-        p {
-          margin: 1em 0;
-          word-spacing: 0.05em;
-          letter-spacing: 0.01em;
-        }
-      }
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
     }
   }
+}
+
+.image-wrapper:hover .image-actions {
+  opacity: 1;
 }
 </style>

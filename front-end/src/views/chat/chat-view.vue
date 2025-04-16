@@ -192,7 +192,7 @@ const defaultContent = ref(null)
 const defAvatar = ref('https://s3.hyperdust.io/upload/20250411/67f8cbcbe4b0bc355fbb060e.png')
 
 const options = ref<AiMessageParams>({
-  enableVectorStore: false,
+  enableVectorStore: true,
   enableAgent: false,
   model: '',
   baseUrl: '',
@@ -515,6 +515,8 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
             tweets: chatMessage.value.textContent,
             replyTweets: responseMessage.value.textContent,
             replyTweetsName: selectAgent.value.xusername || selectAgent.value.nickName,
+            authorName: loginUser.value?.realName,
+            authorUserName: loginUser.value?.walletAddress ? `${loginUser.value.walletAddress.slice(0, 6)}...${loginUser.value.walletAddress.slice(-4)}` : '',
             avatar: avatar,
           },
         }
@@ -944,7 +946,7 @@ const toggleSessionPanel = () => {
     <!-- LOGO部分调整到最左边 -->
     <div class="w-full flex items-start px-4 py-3 border-b border-gray-700 fixed top-0 left-0 z-10">
       <div @click="goHome" class="flex items-center cursor-pointer">
-        <img src="../../assets/logo2.png" style="width: 5rem; height: 5rem" loading="lazy" class="cursor-pointer ml-[100px]" alt="logo" />
+        <img src="../../assets/logo2.png" style="width: 5rem; height: 5rem" loading="lazy" class="cursor-pointer ml-[20px]" alt="logo" />
         <span class="text-white text-2xl font-bold ml-4">MOSS&nbsp;AI</span>
       </div>
     </div>
@@ -1006,14 +1008,15 @@ const toggleSessionPanel = () => {
       <!-- 会话列表面板 -->
       <div class="session-panel" :class="{ collapsed: isSessionPanelCollapsed }">
         <div class="button-wrapper mt-20">
-          <div class="flex items-center space-x-2">
-            <div class="create-session-btn cursor-pointer flex items-center justify-center px-4 py-2 text-sm hover:bg-gray-700 rounded" @click="handleSessionCreate">
-              <img src="../../assets/create.png" alt="create" class="create-icon w-5 h-5" />
-            </div>
-            <div class="toggle-panel-btn cursor-pointer flex items-center justify-center px-4 py-2 text-sm hover:bg-gray-700 rounded" @click="toggleSessionPanel">
+          <div class="flex items-center justify-between w-full">
+            <div class="toggle-panel-btn cursor-pointer flex items-center py-10 text-sm hover:bg-gray-700 rounded" @click="toggleSessionPanel">
               <el-icon :size="20" style="color: white">
                 <component :is="isSessionPanelCollapsed ? 'ArrowRight' : 'ArrowLeft'" />
               </el-icon>
+            </div>
+
+            <div v-if="!isSessionPanelCollapsed" class="create-session-btn cursor-pointer flex items-center px-4 py-2 text-sm hover:bg-gray-700 rounded" @click="handleSessionCreate">
+              <img src="../../assets/create.png" alt="create" class="create-icon w-5 h-5" />
             </div>
           </div>
         </div>
@@ -1108,15 +1111,15 @@ const toggleSessionPanel = () => {
         <div ref="messageListRef" class="message-list">
           <!-- Transition effect -->
           <transition-group name="list" v-if="activeSession && selectAgent">
-            <message-row v-for="message in messageList" :agent-avatar="message.avatar" :avatar="loginUser && loginUser.avatar ? loginUser.avatar : user" :key="message.id" :message="message"></message-row>
+            <message-row v-for="message in messageList" :defAgentAvatar="selectAgent.avatar" :avatar="message.avatar" :key="message.id" :message="message"></message-row>
           </transition-group>
         </div>
         <!-- Listen for send event -->
         <message-input @send="preHandleSendMessage" :loading="sendLoading" @search="handleSearchWeb" :functionStatus="selectAgent.functionStatus" v-if="activeSession && selectAgent"></message-input>
 
-        <el-dropdown v-if="loginUser" class="bg-[#303133] rounded-full fixed top-2 right-25 h-7 w-40 mt-20 z-50">
+        <el-dropdown v-if="loginUser" class="bg-[#303133] rounded-full fixed top-2 right-5 h-7 w-40 mt-20 z-50">
           <span class="el-dropdown-link mt-[-5px] flex items-center">
-            <el-avatar :size="16" :src="loginUser.avatar" style="border: none" />
+            <el-avatar :size="16" :src="loginUser.avatar || defAvatar" style="border: none" />
 
             <span class="ml-1.25">
               <Substring :copys="false" color="#ffffff" fontSize="13px" :value="loginUser.walletAddress || loginUser.email"></Substring>
@@ -1130,7 +1133,7 @@ const toggleSessionPanel = () => {
             <el-card class="w-50 bg-[#303133] text-white">
               <template #header>
                 <div class="card-header flex items-center">
-                  <el-avatar :size="25" :src="loginUser.avatar" />
+                  <el-avatar :size="25" :src="loginUser.avatar || defAvatar" />
 
                   <span class="ml-3.75">
                     <Substring fontSize="12px" :value="loginUser.walletAddress || loginUser.email"></Substring>
@@ -1289,7 +1292,7 @@ const toggleSessionPanel = () => {
 
   .chat-panel {
     margin: 0 auto;
-    width: 90%;
+    width: 99%;
     display: flex;
     background-color: #1e1e1e;
     height: 90vh;
@@ -1301,7 +1304,7 @@ const toggleSessionPanel = () => {
       display: flex;
       flex-direction: column;
       box-sizing: border-box;
-      padding: 20px;
+      padding: 10px;
       position: relative;
       border-right: 1px solid rgba(255, 255, 255, 0.07);
       background-color: #141414;
@@ -1311,18 +1314,20 @@ const toggleSessionPanel = () => {
       transition: width 0.3s ease;
 
       &.collapsed {
-        width: 64px;
+        width: 40px;
       }
 
       &:not(.collapsed) {
-        width: 256px;
+        width: 350px;
       }
 
       .button-wrapper {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
-        gap: 8px;
+        justify-content: space-between;
+        width: 100%;
+        padding: 10px 0;
       }
 
       .toggle-panel-btn {
@@ -1333,10 +1338,25 @@ const toggleSessionPanel = () => {
         justify-content: center;
         border-radius: 8px;
         transition: all 0.3s ease;
+        background-color: #1e1e1e;
+        cursor: pointer;
+        margin: 0;
+        padding: 0;
+        border: none;
+        outline: none;
 
         &:hover {
           background-color: rgba(255, 255, 255, 0.1);
         }
+
+        .el-icon {
+          color: white;
+          font-size: 20px;
+        }
+      }
+
+      .create-session-btn {
+        margin-left: auto;
       }
 
       .session-list {
@@ -1357,8 +1377,8 @@ const toggleSessionPanel = () => {
 
     /* Right message history panel */
     .message-panel {
-      width: calc(100% - 500px);
-      height: 100%;
+      width: calc(100%);
+      height: 95%;
       display: flex;
       flex-direction: column;
 
