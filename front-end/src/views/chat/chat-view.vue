@@ -1127,7 +1127,7 @@ const toggleSessionPanel = () => {
       <!-- 消息面板 -->
       <div class="message-panel">
         <!-- Session name -->
-        <div class="header mt-50" v-if="activeSession">
+        <div class="header" :class="{ 'mt-50': isMobile }" v-if="activeSession">
           <div class="front">
             <!-- 显示当前选中agent的信息 -->
             <div class="flex flex-col">

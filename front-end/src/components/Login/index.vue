@@ -10,7 +10,7 @@
                 <div class="space-y-3">
                   <div class="flex justify-center">
                     <div class="flex flex-col items-center gap-3">
-                      <img src="../../assets/logo.png" loading="lazy" alt="tailus logo" style="width: 45%" />
+                      <img src="../../assets/logo2.png" loading="lazy" alt="tailus logo" style="width: 45%" />
                     </div>
                   </div>
                 </div>
@@ -52,7 +52,7 @@
 
                   <div>
                     <div class="flex justify-center">
-                      <el-button type="primary" @click="emailLogin" class="group h-10 w-50/100 px-8 border-2 border-gray-600 rounded-full transition duration-300 hover:border-blue-400 focus:bg-blue-900 active:bg-blue-800" style="background-color: #00ff01; border-color: #00ff01">
+                      <el-button type="primary" @click="emailLogin" class="group h-10 w-80/100 px-8 border-2 border-gray-600 rounded-full transition duration-300 hover:border-blue-400 focus:bg-blue-900 active:bg-blue-800" style="background-color: #00ff01; border-color: #00ff01">
                         <div class="relative flex items-center space-x-3 justify-center">
                           <span class="block w-max font-semibold tracking-wide text-black text-sm transition duration-300 group-hover:text-blue-400 sm:text-base">Login with Email</span>
                         </div>
