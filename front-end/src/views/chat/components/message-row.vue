@@ -101,44 +101,47 @@ const handleDownload = async (imageUrl: string) => {
 <style lang="scss" scoped>
 .message-row {
   display: flex;
-  margin-bottom: 20px;
-  padding: 0 20px;
+  margin-bottom: 16px;
+  padding: 0 12px;
 
   &.message-row-user {
     flex-direction: row-reverse;
   }
 
   .avatar {
-    margin: 0 10px;
+    margin: 0 8px;
   }
 
   .message-content {
-    max-width: 70%;
+    max-width: 85%;
     background-color: #2b2b2b;
-    padding: 10px 15px;
-    border-radius: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
     color: white;
+    word-break: break-word;
   }
 }
 
 .image-container {
   position: relative;
   display: inline-block;
-  margin-top: 10px;
+  margin-top: 8px;
+  width: 100%;
 }
 
 .image-wrapper {
   position: relative;
   display: inline-block;
-  margin-top: 10px;
+  margin-top: 8px;
+  width: 100%;
 }
 
 .image-actions {
   position: absolute;
-  bottom: 10px;
+  bottom: 8px;
+  right: 8px;
   z-index: 1;
-  opacity: 0;
-  transition: opacity 0.3s;
+  display: flex;
   background: rgba(0, 0, 0, 0.5);
   padding: 4px;
   border-radius: 4px;
@@ -150,6 +153,8 @@ const handleDownload = async (imageUrl: string) => {
     display: flex;
     align-items: center;
     gap: 4px;
+    font-size: 12px;
+    padding: 4px 8px;
 
     &:hover {
       background-color: rgba(255, 255, 255, 0.1);
@@ -157,7 +162,32 @@ const handleDownload = async (imageUrl: string) => {
   }
 }
 
-.image-wrapper:hover .image-actions {
-  opacity: 1;
+// 响应式样式
+@media screen and (max-width: 768px) {
+  .message-row {
+    margin-bottom: 12px;
+    padding: 0 8px;
+
+    .avatar {
+      margin: 0 6px;
+    }
+
+    .message-content {
+      max-width: 90%;
+      padding: 6px 10px;
+    }
+  }
+
+  .el-image {
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .image-actions {
+    .el-button {
+      font-size: 11px;
+      padding: 3px 6px;
+    }
+  }
 }
 </style>

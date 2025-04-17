@@ -110,6 +110,19 @@ html.dark {
   --el-bg-color-overlay: #1d1e1f;
 }
 
+.el-drawer {
+  --el-drawer-bg-color: #1e1e1e;
+  --el-drawer-padding-primary: var(--el-dialog-padding-primary, 20px);
+  position: absolute;
+  box-sizing: border-box;
+  background-color: var(--el-drawer-bg-color);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--el-box-shadow-dark);
+  overflow: hidden;
+  transition: all var(--el-transition-duration);
+}
+
 .el-dialog {
   --el-dialog-width: 50%;
   --el-dialog-margin-top: 15vh;

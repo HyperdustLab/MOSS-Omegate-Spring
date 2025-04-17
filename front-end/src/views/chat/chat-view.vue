@@ -199,7 +199,19 @@ const options = ref<AiMessageParams>({
 })
 const embeddingLoading = ref(false)
 
+const isMobile = ref(false)
+const drawerVisible = ref(false)
+const showAgentList = ref(false)
+const showSessionList = ref(false)
+
+// 添加检测移动端的函数
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768
+}
+
 onMounted(async () => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
   await getDefaultContent()
 
   if (localStorage.getItem('X-Token')) {
@@ -236,6 +248,7 @@ onMounted(async () => {
 // 组件卸载时移除监听
 onUnmounted(() => {
   contactListRef.value?.removeEventListener('scroll', handleScroll)
+  window.removeEventListener('resize', checkMobile)
 })
 
 // ChatGPT response
@@ -321,6 +334,7 @@ async function getSessionList() {
 }
 
 function handleSelectSession(session) {
+  showSessionList.value = false
   activeSession.value = session
   getMessageList()
 }
@@ -754,6 +768,7 @@ const preHandleSelectAgent = (agent) => {
 
 // 添加选中方法
 const handleSelectAgent = (_agent) => {
+  showAgentList.value = false
   if (_agent) {
     selectAgent.value = _agent
     selectAgentId.value = _agent.id
@@ -945,16 +960,27 @@ const toggleSessionPanel = () => {
   <div class="home-view dark">
     <!-- LOGO部分调整到最左边 -->
     <div class="w-full flex items-start px-4 py-3 border-b border-gray-700 fixed top-0 left-0 z-10">
-      <div @click="goHome" class="flex items-center cursor-pointer">
-        <img src="../../assets/logo2.png" style="width: 5rem; height: 5rem" loading="lazy" class="cursor-pointer ml-[20px]" alt="logo" />
-        <span class="text-white text-2xl font-bold ml-4">MOSS&nbsp;AI</span>
+      <div class="flex items-center">
+        <!-- 添加移动端菜单按钮 -->
+        <template v-if="isMobile">
+          <el-button class="mr-2 dark-button" @click="showAgentList = !showAgentList">
+            <el-icon><Menu /></el-icon>
+          </el-button>
+          <el-button class="mr-2 dark-button" @click="showSessionList = !showSessionList">
+            <el-icon><ChatRound /></el-icon>
+          </el-button>
+        </template>
+        <div @click="goHome" class="flex items-center cursor-pointer">
+          <img src="../../assets/logo2.png" style="width: 5rem; height: 5rem" loading="lazy" class="cursor-pointer ml-[20px]" alt="logo" />
+          <span class="text-white text-2xl font-bold ml-4">MOSS&nbsp;AI</span>
+        </div>
       </div>
     </div>
 
     <!-- Entire chat panel -->
     <div class="chat-panel" style="margin-top: 100px" v-loading="loading">
-      <!-- 将联系人列表移到最左边 -->
-      <div class="contact-panel w-64 border-r border-gray-700 bg-[#1e1e1e] h-full">
+      <!-- 在非移动端显示联系人列表 -->
+      <div v-if="!isMobile" class="contact-panel w-64 border-r border-gray-700 bg-[#1e1e1e] h-full">
         <!-- 其他内容添加padding -->
         <div class="p-4">
           <div class="text-white text-lg mb-4">My Agent</div>
@@ -1006,7 +1032,7 @@ const toggleSessionPanel = () => {
       </div>
 
       <!-- 会话列表面板 -->
-      <div class="session-panel" :class="{ collapsed: isSessionPanelCollapsed }">
+      <div v-if="!isMobile" class="session-panel" :class="{ collapsed: isSessionPanelCollapsed }">
         <div class="button-wrapper mt-20">
           <div class="flex items-center justify-between w-full">
             <div class="toggle-panel-btn cursor-pointer flex items-center py-10 text-sm hover:bg-gray-700 rounded" @click="toggleSessionPanel">
@@ -1167,6 +1193,64 @@ const toggleSessionPanel = () => {
         <UploadEmbedding ref="uploadEmbeddingRef"></UploadEmbedding>
       </div>
     </div>
+
+    <!-- 移动端抽屉 -->
+    <el-drawer v-model="showAgentList" direction="ltr" size="80%" :with-header="false" class="mobile-drawer dark-drawer">
+      <div class="drawer-content">
+        <!-- 联系人列表 -->
+        <div class="contact-panel bg-[#1e1e1e] h-full">
+          <div class="p-4">
+            <div class="text-white text-lg mb-4">My Agent</div>
+            <div class="space-y-4 mb-6">
+              <el-select v-if="myAgentList.length > 0" v-model="selectMyAgentId" clearable placeholder="Select an agent" @change="(val) => handleSelectAgent(myAgentList.find((a) => a.id === val))">
+                <el-option v-for="(myAgent, index) in myAgentList" :key="index" :label="myAgent.nickName" :value="myAgent.id" class="dark-option">
+                  <div class="flex items-center space-x-3">
+                    <el-avatar :size="40" :src="myAgent.avatar" />
+                    <span class="text-sm text-white">{{ myAgent.nickName }}</span>
+                  </div>
+                </el-option>
+              </el-select>
+
+              <div v-else>
+                <div class="flex items-center justify-center p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors duration-200">
+                  <el-button @click="handleCreateMyAgent" round type="primary" class="w-full">Create My Agent</el-button>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-white text-lg mb-4">Agent List</div>
+            <div class="mb-4">
+              <el-input v-model="searchQuery" placeholder="Search agents..." class="w-full" :prefix-icon="Search"></el-input>
+            </div>
+            <div ref="contactListRef" class="h-[calc(100vh-10px)] overflow-y-auto custom-scrollbar" style="max-height: calc(90% - 120px)">
+              <div class="space-y-2">
+                <div v-for="agent in agentList" :key="agent.id" class="flex items-center space-x-3 p-2 bg-[#1e1e1e] hover:bg-[#2c2c2c] rounded-lg cursor-pointer transition-colors duration-200" :class="{ 'bg-[#2c2c2c]': selectAgentId === agent.id }" @click="preHandleSelectAgent(agent)">
+                  <el-avatar :size="40" :src="agent.avatar" />
+                  <div>
+                    <div class="text-white text-sm flex items-center">
+                      {{ agent.nickName }}
+                      <img v-if="agent.xname" src="../../assets/x.svg" alt="X" class="w-4 h-4 ml-6 mt-2" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-drawer>
+
+    <!-- 会话列表抽屉 -->
+    <el-drawer v-model="showSessionList" direction="ltr" size="80%" :with-header="false" class="mobile-drawer dark-drawer">
+      <div class="drawer-content">
+        <div class="session-list mt-4">
+          <div class="text-white text-lg mb-4 px-4">Sessions</div>
+          <div class="h-[calc(100vh-10vh)] overflow-y-auto custom-scrollbar">
+            <session-item v-for="session in sessionList" :key="session.id" :active="session.id === activeSession?.id" :session="session" class="session" @click="handleSelectSession(session)" @delete="handleDeleteSession(session.id)" />
+          </div>
+        </div>
+      </div>
+    </el-drawer>
   </div>
 </template>
 <style lang="scss" scoped>
@@ -1636,6 +1720,78 @@ const toggleSessionPanel = () => {
         background-color: #2c2c2c;
       }
     }
+  }
+}
+
+.mobile-drawer {
+  :deep(.el-drawer) {
+    background-color: #1e1e1e;
+    border: none;
+  }
+
+  :deep(.el-drawer__header) {
+    color: white;
+    border-bottom: 1px solid #303133;
+  }
+
+  :deep(.el-drawer__body) {
+    padding: 0;
+    overflow: hidden;
+  }
+}
+
+.drawer-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #1e1e1e;
+
+  .session-list {
+    min-height: 800px; // Add minimum height for mobile session list
+
+    .session {
+      margin-bottom: 10px; // Add some spacing between sessions
+    }
+  }
+}
+
+// 添加媒体查询
+@media screen and (max-width: 768px) {
+  .chat-panel {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .message-panel {
+    width: 100%;
+  }
+}
+
+.toggle-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: white;
+
+  &:hover {
+    background: transparent;
+    color: #409eff;
+  }
+}
+
+.dark-button {
+  background-color: #1e1e1e !important;
+  border-color: #303133 !important;
+  color: white !important;
+
+  &:hover {
+    background-color: #2c2c2c !important;
+    border-color: #409eff !important;
+  }
+
+  &:active {
+    background-color: #2c2c2c !important;
+    border-color: #409eff !important;
   }
 }
 </style>
