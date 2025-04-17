@@ -111,7 +111,7 @@ html.dark {
 }
 
 .el-drawer {
-  --el-drawer-bg-color: #1e1e1e;
+  --el-drawer-bg-color: #141414;
   --el-drawer-padding-primary: var(--el-dialog-padding-primary, 20px);
   position: absolute;
   box-sizing: border-box;

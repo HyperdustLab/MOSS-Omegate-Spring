@@ -49,7 +49,7 @@ const uploadToggleButton = () => {
     <div class="input-wrapper">
       <div class="input-container">
         <!-- Press enter to send, input box height is 3 lines -->
-        <el-input v-model="message.text" :autosize="false" :rows="2" class="input" resize="none" type="textarea" @keydown.enter.prevent="sendMessage"> </el-input>
+        <el-input v-model="message.text" :autosize="false" :rows="1" class="input" resize="none" type="textarea" @keydown.enter.prevent="sendMessage"> </el-input>
         <el-button :loading="props.loading" round type="primary" class="send-button" @click="sendMessage">
           <el-icon class="el-icon--left">
             <Position />
@@ -98,6 +98,18 @@ const uploadToggleButton = () => {
     &:focus {
       border-color: #409eff;
     }
+  }
+
+  @media screen and (max-width: 768px) {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin-bottom: 0;
+    z-index: 1000;
+    border-radius: 0;
+    padding: 10px;
+    height: auto;
   }
 }
 

@@ -960,27 +960,75 @@ const toggleSessionPanel = () => {
   <div class="home-view dark">
     <!-- LOGO部分调整到最左边 -->
     <div class="w-full flex items-start px-4 py-3 border-b border-gray-700 fixed top-0 left-0 z-10">
-      <div class="flex items-center">
-        <!-- 添加移动端菜单按钮 -->
-        <template v-if="isMobile">
-          <el-button class="mr-2 dark-button" @click="showAgentList = !showAgentList">
-            <el-icon><Menu /></el-icon>
-          </el-button>
-          <el-button class="mr-2 dark-button" @click="showSessionList = !showSessionList">
-            <el-icon><ChatRound /></el-icon>
-          </el-button>
-        </template>
-        <div @click="goHome" class="flex items-center cursor-pointer">
-          <img src="../../assets/logo2.png" style="width: 5rem; height: 5rem" loading="lazy" class="cursor-pointer ml-[20px]" alt="logo" />
-          <span class="text-white text-2xl font-bold ml-4">MOSS&nbsp;AI</span>
+      <div class="flex items-center justify-between w-full">
+        <div class="flex items-center">
+          <!-- 添加移动端菜单按钮 -->
+          <template v-if="isMobile">
+            <el-button class="mr-2 dark-button" @click="showAgentList = !showAgentList">
+              <el-icon><Menu /></el-icon>
+            </el-button>
+            <el-button class="mr-2 dark-button" @click="showSessionList = !showSessionList">
+              <el-icon><ChatRound /></el-icon>
+            </el-button>
+          </template>
+          <div @click="goHome" class="flex items-center cursor-pointer">
+            <img src="../../assets/logo2.png" loading="lazy" class="cursor-pointer ml-[20px]" alt="logo" />
+            <span class="text-white text-2xl font-bold ml-4">MOSS&nbsp;AI</span>
+          </div>
         </div>
+
+        <!-- 将登录按钮移到logo旁边 -->
+        <div v-if="!loginUser" class="user-login-btn" @click="handleLogin">
+          <el-avatar :size="16" :src="user" style="border: none" />
+          <span class="ml-1.25 text-white mobile:ml-0.5">Login In</span>
+        </div>
+        <el-dropdown v-else class="user-dropdown">
+          <span class="el-dropdown-link flex items-center">
+            <el-avatar :size="16" :src="loginUser.avatar || defAvatar" style="border: none" />
+
+            <span class="ml-1.25 mobile:ml-0.5">
+              <Substring :copys="false" color="#ffffff" fontSize="13px" :value="loginUser.walletAddress || loginUser.email"></Substring>
+            </span>
+
+            <el-icon size="13" class="el-icon--right mobile:hidden">
+              <arrow-down />
+            </el-icon>
+          </span>
+          <template #dropdown>
+            <el-card class="w-50 bg-[#303133] text-white mobile:w-40">
+              <template #header>
+                <div class="card-header flex items-center">
+                  <el-avatar :size="25" :src="loginUser.avatar || defAvatar" />
+
+                  <span class="ml-3.75 mobile:ml-2">
+                    <Substring fontSize="12px" :value="loginUser.walletAddress || loginUser.email"></Substring>
+                  </span>
+                </div>
+              </template>
+
+              <p class="ml-1.25 flex items-center">
+                <el-icon size="20" class="text-white">
+                  <User />
+                </el-icon>
+
+                <el-button type="text" @click="goUser" style="color: white" class="text-xs text-white" link>Dashboard</el-button>
+              </p>
+
+              <p class="ml-1.25 flex items-center mt-7.5">
+                <el-image :src="logoutPng" class="w-5 h-5"></el-image>
+
+                <el-button type="text" @click="disconnect" style="color: white" class="text-xs text-white" link>Disconnect</el-button>
+              </p>
+            </el-card>
+          </template>
+        </el-dropdown>
       </div>
     </div>
 
     <!-- Entire chat panel -->
-    <div class="chat-panel" style="margin-top: 100px" v-loading="loading">
+    <div class="chat-panel" v-loading="loading">
       <!-- 在非移动端显示联系人列表 -->
-      <div v-if="!isMobile" class="contact-panel w-64 border-r border-gray-700 bg-[#1e1e1e] h-full">
+      <div v-if="!isMobile" class="contact-panel w-70 border-r border-gray-700 bg-[#1e1e1e] h-full">
         <!-- 其他内容添加padding -->
         <div class="p-4">
           <div class="text-white text-lg mb-4">My Agent</div>
@@ -1079,7 +1127,7 @@ const toggleSessionPanel = () => {
       <!-- 消息面板 -->
       <div class="message-panel">
         <!-- Session name -->
-        <div class="header" v-if="activeSession">
+        <div class="header mt-50" v-if="activeSession">
           <div class="front">
             <!-- 显示当前选中agent的信息 -->
             <div class="flex flex-col">
@@ -1143,51 +1191,6 @@ const toggleSessionPanel = () => {
         <!-- Listen for send event -->
         <message-input @send="preHandleSendMessage" :loading="sendLoading" @search="handleSearchWeb" :functionStatus="selectAgent.functionStatus" v-if="activeSession && selectAgent"></message-input>
 
-        <el-dropdown v-if="loginUser" class="bg-[#303133] rounded-full fixed top-2 right-5 h-7 w-40 mt-20 z-50">
-          <span class="el-dropdown-link mt-[-5px] flex items-center">
-            <el-avatar :size="16" :src="loginUser.avatar || defAvatar" style="border: none" />
-
-            <span class="ml-1.25">
-              <Substring :copys="false" color="#ffffff" fontSize="13px" :value="loginUser.walletAddress || loginUser.email"></Substring>
-            </span>
-
-            <el-icon size="13" class="el-icon--right">
-              <arrow-down />
-            </el-icon>
-          </span>
-          <template #dropdown>
-            <el-card class="w-50 bg-[#303133] text-white">
-              <template #header>
-                <div class="card-header flex items-center">
-                  <el-avatar :size="25" :src="loginUser.avatar || defAvatar" />
-
-                  <span class="ml-3.75">
-                    <Substring fontSize="12px" :value="loginUser.walletAddress || loginUser.email"></Substring>
-                  </span>
-                </div>
-              </template>
-
-              <p class="ml-1.25 flex items-center">
-                <el-icon size="20" class="text-white">
-                  <User />
-                </el-icon>
-
-                <el-button type="plain" @click="goUser" style="color: white" class="text-xs text-white" link>Dashboard</el-button>
-              </p>
-
-              <p class="ml-1.25 flex items-center mt-7.5">
-                <el-image :src="logoutPng" class="w-5 h-5"></el-image>
-
-                <el-button type="plain" @click="disconnect" style="color: white" class="text-xs text-white" link>Disconnect</el-button>
-              </p>
-            </el-card>
-          </template>
-        </el-dropdown>
-        <div v-else class="bg-[#303133] rounded-full fixed top-2 text-white right-25 h-7 w-40 mt-20 z-50 flex items-center justify-center cursor-pointer" @click="handleLogin">
-          <el-avatar :size="16" :src="user" style="border: none" />
-          <span class="ml-1.25 text-white"> Login In </span>
-        </div>
-
         <Login ref="loginRef" />
 
         <UploadEmbedding ref="uploadEmbeddingRef"></UploadEmbedding>
@@ -1245,7 +1248,13 @@ const toggleSessionPanel = () => {
       <div class="drawer-content">
         <div class="session-list mt-4">
           <div class="text-white text-lg mb-4 px-4">Sessions</div>
-          <div class="h-[calc(100vh-10vh)] overflow-y-auto custom-scrollbar">
+
+          <el-button @click="handleCreateMyAgent" round type="primary" class="w-full">
+            <el-icon class="mr-1"><Plus /></el-icon>
+            Create Session
+          </el-button>
+
+          <div class="h-[calc(95vh-10vh)] overflow-y-auto mt-10 custom-scrollbar">
             <session-item v-for="session in sessionList" :key="session.id" :active="session.id === activeSession?.id" :session="session" class="session" @click="handleSelectSession(session)" @delete="handleDeleteSession(session.id)" />
           </div>
         </div>
@@ -1374,6 +1383,47 @@ const toggleSessionPanel = () => {
   justify-content: center;
   overflow: hidden;
 
+  .w-full {
+    &.flex.items-start {
+      padding: 8px 4px;
+      height: 60px;
+      align-items: center;
+      background-color: #000000;
+      border-bottom: 1px solid #303133;
+
+      .flex.items-center {
+        gap: 4px;
+      }
+
+      // 添加logo容器样式
+      .flex.items-center.cursor-pointer {
+        margin-left: -4px;
+        padding-left: 4px;
+      }
+
+      // 添加logo图片样式
+      img {
+        width: 2rem;
+        height: 2rem;
+      }
+
+      // 添加logo文字样式
+      .text-2xl {
+        font-size: 1rem;
+        margin-left: 0.25rem;
+      }
+
+      @media screen and (max-width: 768px) {
+        padding: 8px 22px;
+
+        .flex.items-center.cursor-pointer {
+          margin-left: -20px;
+          padding-left: 0;
+        }
+      }
+    }
+  }
+
   .chat-panel {
     margin: 0 auto;
     width: 99%;
@@ -1465,6 +1515,29 @@ const toggleSessionPanel = () => {
       height: 95%;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      touch-action: none;
+      -webkit-overflow-scrolling: none;
+      overscroll-behavior: none;
+      -webkit-overscroll-behavior: none;
+
+      @media screen and (max-width: 768px) {
+        width: 100vw;
+        max-width: 100vw;
+        height: 100%;
+        overflow: hidden;
+        touch-action: none;
+        -webkit-overflow-scrolling: none;
+        overscroll-behavior: none;
+        -webkit-overscroll-behavior: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1;
+      }
 
       .header {
         padding: 20px 20px 0 20px;
@@ -1494,21 +1567,26 @@ const toggleSessionPanel = () => {
 
       .message-list {
         padding: 15px;
+        padding-bottom: 100px;
         width: 100%;
         flex: 1;
         box-sizing: border-box;
-        // Scroll overflow when too many messages
-        overflow-y: scroll;
-        // Transition effect when switching chat sessions
-        .list-enter-active,
-        .list-leave-active {
-          transition: all 0.5s ease;
-        }
+        overflow-y: auto;
+        overflow-x: hidden;
+        touch-action: pan-y;
+        max-width: 100vw;
+        scroll-behavior: smooth;
+        margin-bottom: 20px;
+        overscroll-behavior: none;
+        -webkit-overscroll-behavior: none;
 
-        .list-enter-from,
-        .list-leave-to {
-          opacity: 0;
-          transform: translateX(30px);
+        @media screen and (max-width: 768px) {
+          overflow-y: auto;
+          overflow-x: hidden;
+          touch-action: pan-y;
+          max-width: 100vw;
+          overscroll-behavior: none;
+          -webkit-overscroll-behavior: none;
         }
       }
     }
@@ -1526,18 +1604,80 @@ const toggleSessionPanel = () => {
   }
 }
 
-// 修改滚动条样式
+// Global scrollbar hiding
+:deep(*) {
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
 .custom-scrollbar {
   &::-webkit-scrollbar {
-    width: 0; // 将宽度设为0来隐藏滚动条
-    display: none; // 完全隐藏滚动条
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
   }
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
 
-  // 添加 Firefox 的滚动条隐藏
-  scrollbar-width: none;
+// Hide scrollbars for message list
+.message-list {
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
 
-  // 添加 IE 的滚动条隐藏
-  -ms-overflow-style: none;
+// Hide scrollbars for session list
+.session-list {
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+// Hide scrollbars for contact list
+.contact-panel {
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+// Hide scrollbars for drawer content
+.drawer-content {
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+// Hide scrollbars for el-select dropdown
+:deep(.el-select-dropdown__wrap) {
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 // 可以添加选中状态的过渡效果
@@ -1680,45 +1820,29 @@ const toggleSessionPanel = () => {
 }
 
 // 添加全局暗黑模式样式
-:deep(.dark) {
-  .el-select {
-    .el-input__wrapper {
-      background-color: #1e1e1e !important;
-      box-shadow: 0 0 0 1px #303133 inset;
-
-      &:hover {
-        box-shadow: 0 0 0 1px #409eff inset;
-      }
-
-      &.is-focus {
-        box-shadow: 0 0 0 1px #409eff inset;
-      }
+.dark {
+  .el-drawer {
+    :deep {
+      background-color: #1e1e1e;
     }
 
-    .el-input__inner {
-      color: #ffffff !important;
-
-      &::placeholder {
-        color: #606266;
-      }
+    :deep(.el-drawer__header) {
+      background-color: #1e1e1e;
+      border-bottom: 1px solid #303133;
+      margin-bottom: 0;
+      padding: 12px 16px;
+      color: white;
     }
   }
 
-  .el-select-dropdown {
-    background-color: #1e1e1e !important;
-    border: 1px solid #303133;
+  .el-card {
+    :deep {
+      background-color: #1e1e1e;
+      border-color: #303133;
+    }
 
-    .el-select-dropdown__item {
-      color: #ffffff;
-
-      &:hover {
-        background-color: #2c2c2c;
-      }
-
-      &.selected {
-        color: #409eff;
-        background-color: #2c2c2c;
-      }
+    :deep(.el-card__header) {
+      border-bottom-color: #303133;
     }
   }
 }
@@ -1727,6 +1851,10 @@ const toggleSessionPanel = () => {
   :deep(.el-drawer) {
     background-color: #1e1e1e;
     border: none;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    max-width: 100vw;
+    width: 100% !important;
   }
 
   :deep(.el-drawer__header) {
@@ -1737,6 +1865,10 @@ const toggleSessionPanel = () => {
   :deep(.el-drawer__body) {
     padding: 0;
     overflow: hidden;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    max-width: 100vw;
+    width: 100%;
   }
 }
 
@@ -1744,27 +1876,114 @@ const toggleSessionPanel = () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: #1e1e1e;
+  background-color: #000;
+  overflow-x: hidden;
+  width: 100%;
+  touch-action: pan-y;
+  position: relative;
+  max-width: 100vw;
 
   .session-list {
-    min-height: 800px; // Add minimum height for mobile session list
+    min-height: 800px;
+    width: 100%;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    position: relative;
+    max-width: 100vw;
 
     .session {
-      margin-bottom: 10px; // Add some spacing between sessions
+      margin-bottom: 10px;
+      width: 100%;
+      position: relative;
+      max-width: 100vw;
     }
   }
 }
 
-// 添加媒体查询
+// Add these global styles to prevent horizontal scrolling on mobile
 @media screen and (max-width: 768px) {
-  .chat-panel {
+  html,
+  body {
+    overflow-x: hidden;
     width: 100%;
-    margin-left: 0;
+    position: relative;
+    max-width: 100vw;
+  }
+
+  .el-drawer__wrapper {
+    overflow-x: hidden;
+    touch-action: pan-y;
+    max-width: 100vw;
+  }
+
+  .el-drawer__container {
+    overflow-x: hidden;
+    touch-action: pan-y;
+    max-width: 100vw;
+  }
+
+  .home-view {
+    width: 100vw;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .chat-panel {
+    width: 100vw;
+    max-width: 100vw;
+    overflow-x: hidden;
   }
 
   .message-panel {
+    width: 100vw;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .message-list {
+    overflow-x: hidden;
+    touch-action: pan-y;
+    max-width: 100vw;
     width: 100%;
   }
+}
+
+// Add these styles to prevent horizontal scrolling on all elements
+* {
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+// 自定义滚动条样式
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #666 #1e1e1e;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #1e1e1e;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #666;
+    border-radius: 4px;
+  }
+}
+
+// 消息列表过渡动画
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s ease;
+}
+
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
 }
 
 .toggle-btn {
@@ -1793,5 +2012,76 @@ const toggleSessionPanel = () => {
     background-color: #2c2c2c !important;
     border-color: #409eff !important;
   }
+}
+
+.user-dropdown {
+  background-color: #303133;
+  border-radius: 9999px;
+  height: 28px;
+  width: 160px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: #2c2c2c;
+  }
+
+  @media screen and (max-width: 768px) {
+    width: 140px;
+  }
+}
+
+.user-login-btn {
+  background-color: #303133;
+  border-radius: 9999px;
+  height: 28px;
+  width: 160px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: #2c2c2c;
+  }
+
+  @media screen and (max-width: 768px) {
+    width: 140px;
+    margin-right: 0;
+  }
+}
+
+.create-session-btn {
+  margin: 0 16px;
+
+  img {
+    transition: transform 0.3s ease;
+  }
+
+  &:hover {
+    img {
+      transform: rotate(90deg);
+    }
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+// Add styles for the message input container
+.message-input-container {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  background-color: #1e1e1e;
+  padding: 15px;
+  z-index: 10;
 }
 </style>
