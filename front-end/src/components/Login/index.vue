@@ -10,7 +10,7 @@
                 <div class="space-y-3">
                   <div class="flex justify-center">
                     <div class="flex flex-col items-center gap-3">
-                      <img src="../../assets/logo2.png" loading="lazy" alt="tailus logo" style="width: 45%" />
+                      <img src="../../assets/logo2.png" style="width: 5rem; height: 5rem" loading="lazy" alt="tailus logo" />
                     </div>
                   </div>
                 </div>

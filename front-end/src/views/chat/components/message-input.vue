@@ -19,6 +19,18 @@ const emit = defineEmits<{
 }>()
 // Message in input box
 const message = ref<Message>({ text: '', image: '' })
+
+// Prevent page scrolling when input is focused
+const handleFocus = () => {
+  document.body.style.overflow = 'hidden'
+  document.body.style.position = 'fixed'
+}
+
+const handleBlur = () => {
+  document.body.style.overflow = ''
+  document.body.style.position = ''
+}
+
 const sendMessage = () => {
   if (!message.value.text) {
     ElMessage.warning('Please enter a message')
@@ -49,7 +61,7 @@ const uploadToggleButton = () => {
     <div class="input-wrapper">
       <div class="input-container">
         <!-- Press enter to send, input box height is 3 lines -->
-        <el-input v-model="message.text" :autosize="false" :rows="1" class="input" resize="none" type="textarea" @keydown.enter.prevent="sendMessage"> </el-input>
+        <el-input v-model="message.text" :autosize="false" :rows="1" class="input" resize="none" type="textarea" @keydown.enter.prevent="sendMessage" @touchmove.prevent @focus="handleFocus" @blur="handleBlur"></el-input>
         <el-button :loading="props.loading" round type="primary" class="send-button" @click="sendMessage">
           <el-icon class="el-icon--left">
             <Position />
@@ -82,6 +94,7 @@ const uploadToggleButton = () => {
   border-top-left-radius: 5px;
   background-color: #1e1e1e;
   margin-bottom: 10px;
+
   .el-form-item {
     align-items: center;
   }
@@ -93,6 +106,8 @@ const uploadToggleButton = () => {
     box-shadow: 0 0 0 1px #282c34 inset;
     padding-right: 120px;
     padding-bottom: 50px;
+    font-size: 16px;
+    touch-action: pan-y; // Allow vertical panning for text selection
 
     &:hover,
     &:focus {
@@ -110,6 +125,8 @@ const uploadToggleButton = () => {
     border-radius: 0;
     padding: 10px;
     height: auto;
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
   }
 }
 
