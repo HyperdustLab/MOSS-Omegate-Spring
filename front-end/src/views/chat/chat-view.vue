@@ -964,16 +964,16 @@ const toggleSessionPanel = () => {
         <div class="flex items-center">
           <!-- 添加移动端菜单按钮 -->
           <template v-if="isMobile">
-            <el-button class="mr-2 dark-button" @click="showAgentList = !showAgentList">
+            <el-button class="mr-0.5 dark-button" @click="showAgentList = !showAgentList">
               <el-icon><Menu /></el-icon>
             </el-button>
-            <el-button class="mr-2 dark-button" @click="showSessionList = !showSessionList">
+            <el-button class="mr-0.5 dark-button" style="margin-left: 0.1rem" @click="showSessionList = !showSessionList">
               <el-icon><ChatRound /></el-icon>
             </el-button>
           </template>
-          <div @click="goHome" class="flex items-center cursor-pointer">
-            <img src="../../assets/logo2.png" loading="lazy" class="cursor-pointer ml-[20px]" alt="logo" />
-            <span class="text-white text-2xl font-bold ml-4">MOSS&nbsp;AI</span>
+          <div class="flex items-center cursor-pointer w-[10rem]">
+            <img @click="goHome" src="../../assets/logo2.png" loading="lazy" class="cursor-pointer w-8 h-8" alt="logo" />
+            <span @click="goHome" class="text-white text-2xl font-bold ml-2">MOSS&nbsp;AI</span>
           </div>
         </div>
 
@@ -1249,10 +1249,9 @@ const toggleSessionPanel = () => {
         <div class="session-list mt-4">
           <div class="text-white text-lg mb-4 px-4">Sessions</div>
 
-          <el-button @click="handleCreateMyAgent" round type="primary" class="w-full">
-            <el-icon class="mr-1"><Plus /></el-icon>
-            Create Session
-          </el-button>
+          <div class="create-session-btn cursor-pointer flex items-center px-4 py-2 text-sm hover:bg-gray-700 rounded" @click="handleSessionCreate">
+            <img src="../../assets/create.png" alt="create" class="create-icon w-8 h-8" />
+          </div>
 
           <div class="h-[calc(95vh-10vh)] overflow-y-auto mt-10 custom-scrollbar">
             <session-item v-for="session in sessionList" :key="session.id" :active="session.id === activeSession?.id" :session="session" class="session" @click="handleSelectSession(session)" @delete="handleDeleteSession(session.id)" />
@@ -1403,8 +1402,8 @@ const toggleSessionPanel = () => {
 
       // 添加logo图片样式
       img {
-        width: 2rem;
-        height: 2rem;
+        width: 4rem;
+        height: 4rem;
       }
 
       // 添加logo文字样式
@@ -1414,10 +1413,7 @@ const toggleSessionPanel = () => {
       }
 
       @media screen and (max-width: 768px) {
-        padding: 8px 22px;
-
         .flex.items-center.cursor-pointer {
-          margin-left: -20px;
           padding-left: 0;
         }
       }
