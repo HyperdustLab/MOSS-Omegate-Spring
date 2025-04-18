@@ -182,6 +182,8 @@ const inputReplyMediaFileUrls = ref([])
 
 const loginUser = ref(null)
 
+const mobileContactListRef = ref(null)
+
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
@@ -207,6 +209,31 @@ const showSessionList = ref(false)
 // 添加检测移动端的函数
 const checkMobile = () => {
   isMobile.value = window.innerWidth <= 768
+}
+
+function handleShowAgentList() {
+  showAgentList.value = true
+  nextTick(() => {
+    if (mobileContactListRef.value) {
+      mobileContactListRef.value.addEventListener('scroll', handleMobileScroll)
+    }
+  })
+}
+
+const handleMobileScroll = () => {
+  if (!mobileContactListRef.value) return
+
+  const { scrollTop, scrollHeight, clientHeight } = mobileContactListRef.value
+  if (scrollHeight - scrollTop - clientHeight < 20) {
+    loadMore()
+  }
+}
+
+function handleCloseAgentList() {
+  showAgentList.value = false
+  if (mobileContactListRef.value) {
+    mobileContactListRef.value.removeEventListener('scroll', handleMobileScroll)
+  }
 }
 
 onMounted(async () => {
@@ -959,12 +986,12 @@ const toggleSessionPanel = () => {
 <template>
   <div class="home-view dark">
     <!-- LOGO部分调整到最左边 -->
-    <div class="w-full flex items-start px-4 py-3 border-b border-gray-700 fixed top-0 left-0 z-10">
+    <div class="w-full flex items-start px-4 py-3 border-b border-gray-700 fixed top-0 left-0 z-10 overflow-hidden">
       <div class="flex items-center justify-between w-full">
         <div class="flex items-center">
           <!-- 添加移动端菜单按钮 -->
           <template v-if="isMobile">
-            <el-button class="mr-0.5 dark-button" @click="showAgentList = !showAgentList">
+            <el-button class="mr-0.5 dark-button" @click="handleShowAgentList">
               <el-icon><Menu /></el-icon>
             </el-button>
             <el-button class="mr-0.5 dark-button" style="margin-left: 0.1rem" @click="showSessionList = !showSessionList">
@@ -1198,10 +1225,10 @@ const toggleSessionPanel = () => {
     </div>
 
     <!-- 移动端抽屉 -->
-    <el-drawer v-model="showAgentList" direction="ltr" size="80%" :with-header="false" class="mobile-drawer dark-drawer">
+    <el-drawer v-model="showAgentList" @close="handleCloseAgentList" direction="ltr" size="80%" :with-header="false" class="mobile-drawer dark-drawer overflow-hidden">
       <div class="drawer-content">
         <!-- 联系人列表 -->
-        <div class="contact-panel bg-[#1e1e1e] h-full">
+        <div class="contact-panel bg-[#1e1e1e] h-full overflow-hidden">
           <div class="p-4">
             <div class="text-white text-lg mb-4">My Agent</div>
             <div class="space-y-4 mb-6">
@@ -1225,7 +1252,7 @@ const toggleSessionPanel = () => {
             <div class="mb-4">
               <el-input v-model="searchQuery" placeholder="Search agents..." class="w-full" :prefix-icon="Search"></el-input>
             </div>
-            <div ref="contactListRef" class="h-[calc(100vh-10px)] overflow-y-auto custom-scrollbar" style="max-height: calc(90% - 120px)">
+            <div ref="mobileContactListRef" class="h-[calc(100vh-10px)] overflow-y-auto custom-scrollbar" style="max-height: calc(90% - 120px)">
               <div class="space-y-2">
                 <div v-for="agent in agentList" :key="agent.id" class="flex items-center space-x-3 p-2 bg-[#1e1e1e] hover:bg-[#2c2c2c] rounded-lg cursor-pointer transition-colors duration-200" :class="{ 'bg-[#2c2c2c]': selectAgentId === agent.id }" @click="preHandleSelectAgent(agent)">
                   <el-avatar :size="40" :src="agent.avatar" />

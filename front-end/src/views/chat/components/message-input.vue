@@ -58,7 +58,16 @@ const uploadToggleButton = () => {
 
 <template>
   <div class="message-input">
-    <div class="input-wrapper">
+    <div>
+      <div style="display: flex; align-items: center">
+        <el-button v-if="props.functionStatus === 'Y'" :style="{ backgroundColor: buttonActive.search ? '#39b35752' : '#2d2736', color: buttonActive.search ? '#39b357' : 'white', border: 'aliceblue' }" round @click="searchToggleButton" class="toggle-button">Web Search</el-button>
+
+        <el-button :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" icon="Plus" round disabled class="toggle-button">
+          <img style="width: 20px; height: 20px" src="../../../assets/upload.svg" alt="upload" />
+        </el-button>
+      </div>
+    </div>
+    <div class="input-wrapper mt-10">
       <div class="input-container">
         <!-- Press enter to send, input box height is 3 lines -->
         <el-input v-model="message.text" :autosize="false" :rows="1" class="input" resize="none" type="textarea" @keydown.enter.prevent="sendMessage" @touchmove.prevent @focus="handleFocus" @blur="handleBlur"></el-input>
@@ -69,16 +78,6 @@ const uploadToggleButton = () => {
           Send
         </el-button>
       </div>
-
-      <div class="mt-10">
-        <div style="display: flex; align-items: center">
-          <el-button v-if="props.functionStatus === 'Y'" :style="{ backgroundColor: buttonActive.search ? '#39b35752' : '#2d2736', color: buttonActive.search ? '#39b357' : 'white', border: 'aliceblue' }" round @click="searchToggleButton" class="toggle-button">Web Search</el-button>
-
-          <el-button :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" icon="Plus" round disabled class="toggle-button">
-            <img style="width: 20px; height: 20px" src="../../../assets/upload.svg" alt="upload" />
-          </el-button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -86,7 +85,6 @@ const uploadToggleButton = () => {
 <style lang="scss" scoped>
 .message-input {
   padding: 20px 20px 0 20px;
-  height: 7rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   border-right: 1px solid rgba(255, 255, 255, 0.1);
@@ -108,6 +106,8 @@ const uploadToggleButton = () => {
     padding-bottom: 50px;
     font-size: 16px;
     touch-action: pan-y; // Allow vertical panning for text selection
+    overflow: hidden; // Hide scrollbar
+    resize: none; // Disable manual resizing
 
     &:hover,
     &:focus {
