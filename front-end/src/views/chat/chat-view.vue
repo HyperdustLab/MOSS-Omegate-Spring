@@ -654,6 +654,7 @@ async function getAgentList(isLoadMore = false) {
       pageNo: pageNum.value,
       pageSize: pageSize.value,
       userOrderNum: true,
+      showStatus: 'Y',
       noWalletAddress: loginUser.value ? loginUser.value.walletAddress : '',
     }
 
