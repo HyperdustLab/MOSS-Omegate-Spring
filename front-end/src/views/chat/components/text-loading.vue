@@ -1,11 +1,26 @@
 <template>
   <div class="loading">
-    <!--  三个 div 三个黑点 -->
-    <div></div>
-    <div></div>
-    <div></div>
+    <div v-if="text" class="text-content">{{ text }}</div>
+    <template v-else>
+      <!--  三个 div 三个黑点 -->
+      <div></div>
+      <div></div>
+      <div></div>
+    </template>
   </div>
 </template>
+
+<script>
+export default {
+  name: 'TextLoading',
+  props: {
+    text: {
+      type: String,
+      default: '',
+    },
+  },
+}
+</script>
 
 <style lang="scss" scoped>
 .loading {
@@ -17,7 +32,13 @@
   width: 54px;
   padding: 15px;
 
-  div {
+  .text-content {
+    color: inherit;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  div:not(.text-content) {
     background-color: currentColor;
     border: 0 solid currentColor;
     width: 5px;
@@ -28,7 +49,7 @@
     animation: ball-beat 0.7s -0.15s infinite linear;
   }
 
-  div:nth-child(2n-1) {
+  div:nth-child(2n-1):not(.text-content) {
     // 慢0.5秒
     animation-delay: -0.5s;
   }

@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import TextLoading from './text-loading.vue'
 import MarkdownMessage from './markdown-message.vue'
 import type { AiMessage } from '../store/chat-store'
+import ThoughtChain from './ThoughtChain.vue'
 
 const BASE_URL = import.meta.env.VITE_API_HYPERAGI_API
 const downloading = ref(false)
@@ -68,6 +69,9 @@ const handleDownload = async (imageUrl: string) => {
     </div>
     <div class="message-content">
       <div class="message-text" v-html="message.textContent"></div>
+
+      <ThoughtChain class="mt-5" v-if="message.thinkingList && message.thinkingList.length > 0" :items="message.thinkingList" />
+
       <div class="image-container" v-if="images && images.length > 0">
         <div v-for="(image, index) in images" :key="index" class="image-wrapper">
           <el-image class="image" fit="cover" style="width: 50%; height: 50%" :preview-src-list="images" :src="image">
@@ -92,8 +96,6 @@ const handleDownload = async (imageUrl: string) => {
           </div>
         </div>
       </div>
-
-      <TextLoading v-if="!message.textContent && !images.length" style="color: white"></TextLoading>
     </div>
   </div>
 </template>

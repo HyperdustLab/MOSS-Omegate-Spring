@@ -69,6 +69,23 @@ const isProcessing = ref(false)
 
 const reasoningRecord = ref(null)
 
+// ChatGPT response
+const responseMessage = ref<AiMessage>({
+  id: new Date().getTime().toString(),
+  type: 'ASSISTANT',
+  medias: [],
+  textContent: '',
+  sessionId: '',
+})
+
+const chatMessage = ref<AiMessage>({
+  id: new Date().getTime().toString(),
+  type: 'USER',
+  medias: [],
+  textContent: '',
+  sessionId: '',
+})
+
 const wsUrl = BASE_URL.replace('http', 'ws').replace('https', 'wss') + '/ws/app/websocket/' + wsUserId
 
 const { status, data, send, open, close } = useWebSocket(wsUrl, {
@@ -113,6 +130,8 @@ const { status, data, send, open, close } = useWebSocket(wsUrl, {
 
             reasoningRecord.value.inputReplyMediaFileUrls = inputReplyMediaFileUrls.value
 
+            responseMessage.value.thinkingList.push({ title: 'Analysis completed...', status: 'success' })
+
             await saveMessage(chatMessage.value)
             await saveMessage(responseMessage.value)
 
@@ -129,6 +148,8 @@ const { status, data, send, open, close } = useWebSocket(wsUrl, {
           inputTextReplyStatus.value = true
           inputText.value = msg.data.tweets
           sendLoading.value = true
+
+          responseMessage.value.thinkingList.push({ title: 'Environment content organization completed...', status: 'success' })
 
           handleSendMessage({ text: text, inputText: inputText.value, image: '' }).finally(() => {
             isProcessing.value = false
@@ -190,6 +211,8 @@ const route = useRoute()
 const sid = route.query.sid
 
 const defaultContent = ref(null)
+
+const isOnline = ref(false)
 
 const defAvatar = ref('https://s3.hyperdust.io/upload/20250411/67f8cbcbe4b0bc355fbb060e.png')
 
@@ -278,23 +301,6 @@ onUnmounted(() => {
   window.removeEventListener('resize', checkMobile)
 })
 
-// ChatGPT response
-const responseMessage = ref<AiMessage>({
-  id: new Date().getTime().toString(),
-  type: 'ASSISTANT',
-  medias: [],
-  textContent: '',
-  sessionId: '',
-})
-
-const chatMessage = ref<AiMessage>({
-  id: new Date().getTime().toString(),
-  type: 'USER',
-  medias: [],
-  textContent: '',
-  sessionId: '',
-})
-
 async function getDefaultContent() {
   const { result } = await request({
     url: BASE_URL + '/mgn/agentNpc/list',
@@ -366,17 +372,49 @@ function handleSelectSession(session) {
   getMessageList()
 }
 
+async function getCurrAgentOnlineStatus() {
+  const { result } = await request({
+    url: BASE_URL + '/mgn/agent/list',
+    method: 'GET',
+    params: {
+      sid: selectAgent.value.sid,
+    },
+    headers: {
+      'X-Access-Token': token.value,
+    },
+  })
+
+  const agent = result.records[0]
+  return agent.onlineStatus === 1
+}
+
 const preHandleSendMessage = async (message: { text: string; image: string }) => {
   inputTextReplyStatus.value = false
   sendLoading.value = true
   inputText.value = message.text
 
-  const msg = {
-    action: 'autoReplyTweetsText',
-    data: {
-      replyTweetsRecordId: wsUserId,
-      tweets: inputText.value,
-    },
+  isOnline.value = await getCurrAgentOnlineStatus()
+
+  // Image/Audio
+  const medias: AiMessage['medias'] = []
+  if (message.image) {
+    medias.push({ type: 'image', data: message.image })
+  }
+
+  for (const item of messageList.value) {
+    item.thinkingList = null
+  }
+
+  responseMessage.value = {
+    type: 'ASSISTANT',
+    textContent: '',
+    aiSessionId: activeSession.value.id,
+    sessionId: activeSession.value.id,
+    avatar: selectAgent.value.avatar,
+    name: selectAgent.value.nickName,
+    creatorId: selectAgent.value.sid,
+    editorId: selectAgent.value.sid,
+    thinkingList: [],
   }
 
   chatMessage.value = {
@@ -392,6 +430,7 @@ const preHandleSendMessage = async (message: { text: string; image: string }) =>
   }
 
   messageList.value.push(chatMessage.value)
+  messageList.value.push(responseMessage.value)
 
   // 确保在下一个 tick 时滚动到底部
   await nextTick(() => {
@@ -403,20 +442,41 @@ const preHandleSendMessage = async (message: { text: string; image: string }) =>
     }
   })
 
-  if (options.value.enableAgent) {
-    handleSendMessage({ text: message.text, inputText: message.text, image: '' })
-  } else {
-    await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
-      userId: selectAgent.value.owner,
-      msg: JSON.stringify(msg),
-    })
+  if (isOnline.value) {
+    responseMessage.value.thinkingTxt = 'AI POD is observing the environment...'
 
-    setTimeout(() => {
-      console.info('inputTextReplyStatus.value', inputTextReplyStatus.value)
-      if (!inputTextReplyStatus.value) {
-        handleSendMessage({ text: message.text, inputText: message.text, image: '' })
-      }
-    }, 10 * 1000)
+    const msg = {
+      action: 'autoReplyTweetsText',
+      data: {
+        replyTweetsRecordId: wsUserId,
+        tweets: inputText.value,
+      },
+    }
+
+    if (options.value.enableAgent) {
+      responseMessage.value.thinkingTxt = 'Thinking...'
+      handleSendMessage({ text: message.text, inputText: message.text, image: '' })
+    } else {
+      await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
+        userId: selectAgent.value.owner,
+        msg: JSON.stringify(msg),
+      })
+
+      responseMessage.value.thinkingList.push({ title: 'AI POD is organizing the environment content...', status: 'success' })
+
+      setTimeout(() => {
+        responseMessage.value.thinkingList.push({ title: 'Thinking...', status: 'success' })
+
+        console.info('inputTextReplyStatus.value', inputTextReplyStatus.value)
+        if (!inputTextReplyStatus.value) {
+          handleSendMessage({ text: message.text, inputText: message.text, image: '' })
+        }
+      }, 10 * 1000)
+    }
+  } else {
+    responseMessage.value.thinkingList.push({ title: 'Thinking...', status: 'success' })
+
+    handleSendMessage({ text: message.text, inputText: message.text, image: '' })
   }
 }
 
@@ -426,23 +486,6 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
     return
   }
 
-  // Image/Audio
-  const medias: AiMessage['medias'] = []
-  if (message.image) {
-    medias.push({ type: 'image', data: message.image })
-  }
-
-  responseMessage.value = {
-    type: 'ASSISTANT',
-    textContent: '',
-    aiSessionId: activeSession.value.id,
-    sessionId: activeSession.value.id,
-    avatar: selectAgent.value.avatar,
-    name: selectAgent.value.nickName,
-    creatorId: selectAgent.value.sid,
-    editorId: selectAgent.value.sid,
-  }
-
   const form = new FormData()
 
   let content = ''
@@ -450,6 +493,8 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
   let agentName = ''
 
   options.value.userId = selectAgent.value.sid
+
+  responseMessage.value.thinkingTxt = 'Thinking...'
 
   if (!options.value.enableAgent) {
     agentName = selectAgent.value.nickName
@@ -540,7 +585,7 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
 
       inputTextReplyStatus.value = false
 
-      if (options.value.enableAgent) {
+      if (options.value.enableAgent || !isOnline.value) {
         sendLoading.value = false
         await saveMessage(chatMessage.value)
         await saveMessage(responseMessage.value)
@@ -549,6 +594,8 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
 
         inputTextReplyStatus.value = true
       } else {
+        responseMessage.value.thinkingList.push({ title: 'AI POD is collecting photos...', status: 'success' })
+
         const msg = {
           action: 'autoReplyTweetsMedia',
           data: {
@@ -576,6 +623,8 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
             await addReasoningRecord(reasoningRecord.value)
 
             sendLoading.value = false
+
+            responseMessage.value.thinkingList.push({ title: 'Analysis completed...', status: 'success' })
           }
         }, 30 * 1000)
       }
@@ -586,7 +635,7 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
   evtSource.stream()
 
   // Display both messages on page
-  messageList.value.push(...[responseMessage.value])
+
   await nextTick(() => {
     messageListRef.value?.scrollTo(0, messageListRef.value.scrollHeight)
   })
@@ -1064,7 +1113,11 @@ const toggleSessionPanel = () => {
             <el-select v-if="myAgentList.length > 0" v-model="selectMyAgentId" clearable placeholder="Select an agent" @change="(val) => handleSelectAgent(myAgentList.find((a) => a.id === val))">
               <el-option v-for="(myAgent, index) in myAgentList" :key="index" :label="myAgent.nickName" :value="myAgent.id" class="dark-option">
                 <div class="flex items-center space-x-3">
-                  <el-avatar :size="40" :src="myAgent.avatar" />
+                  <div class="relative">
+                    <el-avatar :size="40" :src="myAgent.avatar" />
+                    <div v-if="myAgent.onlineStatus === 1" class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#1e1e1e]"></div>
+                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#1e1e1e]"></div>
+                  </div>
                   <span class="text-sm text-white">{{ myAgent.nickName }}</span>
                 </div>
               </el-option>
@@ -1085,7 +1138,10 @@ const toggleSessionPanel = () => {
           <div ref="contactListRef" class="h-[calc(75vh-80px)] overflow-y-auto custom-scrollbar" style="max-height: calc(90% - 120px)">
             <div class="space-y-2">
               <div v-for="agent in agentList" :key="agent.id" class="flex items-center space-x-3 p-2 bg-[#1e1e1e] hover:bg-[#2c2c2c] rounded-lg cursor-pointer transition-colors duration-200" :class="{ 'bg-[#2c2c2c]': selectAgentId === agent.id }" @click="preHandleSelectAgent(agent)">
-                <el-avatar :size="40" :src="agent.avatar" />
+                <div class="relative">
+                  <el-avatar :size="40" :src="agent.avatar" />
+                  <div v-if="agent.onlineStatus === 1" class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#1e1e1e]"></div>
+                </div>
                 <div>
                   <div class="text-white text-sm flex items-center">
                     {{ agent.nickName }}
@@ -1236,7 +1292,10 @@ const toggleSessionPanel = () => {
               <el-select v-if="myAgentList.length > 0" v-model="selectMyAgentId" clearable placeholder="Select an agent" @change="(val) => handleSelectAgent(myAgentList.find((a) => a.id === val))">
                 <el-option v-for="(myAgent, index) in myAgentList" :key="index" :label="myAgent.nickName" :value="myAgent.id" class="dark-option">
                   <div class="flex items-center space-x-3">
-                    <el-avatar :size="40" :src="myAgent.avatar" />
+                    <div class="relative">
+                      <el-avatar :size="40" :src="myAgent.avatar" />
+                      <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#1e1e1e]"></div>
+                    </div>
                     <span class="text-sm text-white">{{ myAgent.nickName }}</span>
                   </div>
                 </el-option>
@@ -1256,7 +1315,10 @@ const toggleSessionPanel = () => {
             <div ref="mobileContactListRef" class="h-[calc(100vh-10px)] overflow-y-auto custom-scrollbar" style="max-height: calc(90% - 120px)">
               <div class="space-y-2">
                 <div v-for="agent in agentList" :key="agent.id" class="flex items-center space-x-3 p-2 bg-[#1e1e1e] hover:bg-[#2c2c2c] rounded-lg cursor-pointer transition-colors duration-200" :class="{ 'bg-[#2c2c2c]': selectAgentId === agent.id }" @click="preHandleSelectAgent(agent)">
-                  <el-avatar :size="40" :src="agent.avatar" />
+                  <div class="relative">
+                    <el-avatar :size="40" :src="agent.avatar" />
+                    <div v-if="agent.onlineStatus === 1" class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#1e1e1e]"></div>
+                  </div>
                   <div>
                     <div class="text-white text-sm flex items-center">
                       {{ agent.nickName }}
