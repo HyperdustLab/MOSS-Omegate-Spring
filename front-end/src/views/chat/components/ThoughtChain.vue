@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Warning } from '@element-plus/icons-vue'
+import { Check, Warning, Loading } from '@element-plus/icons-vue'
 
 interface ThoughtChainItem {
   title: string
@@ -14,7 +14,14 @@ defineProps<{
 <template>
   <div class="thought-chain">
     <el-timeline>
-      <el-timeline-item v-for="(item, index) in items" :key="index" :type="item.status === 'error' ? 'danger' : 'success'" :icon="item.status === 'error' ? Warning : Check" :color="item.status === 'error' ? '#ff4949' : '#67c23a'">
+      <el-timeline-item
+        v-for="(item, index) in items"
+        :key="index"
+        :type="item.status === 'error' ? 'danger' : item.status === 'pending' ? 'warning' : 'success'"
+        :icon="item.status === 'error' ? Warning : item.status === 'pending' ? Loading : Check"
+        :color="item.status === 'error' ? '#ff4949' : item.status === 'pending' ? '#e6a23c' : '#67c23a'"
+        :class="{ 'is-pending': item.status === 'pending' }"
+      >
         <div class="timeline-content">
           <h4>{{ item.title }}</h4>
           <p class="status-text" :class="item.status">status: {{ item.status }}</p>
@@ -41,6 +48,26 @@ defineProps<{
   :deep(.el-timeline-item__node) {
     background-color: transparent;
     border: none;
+  }
+
+  :deep(.el-timeline-item) {
+    position: relative;
+    padding-bottom: 0px;
+
+    &.is-pending {
+      .el-timeline-item__icon {
+        animation: rotate 1s linear infinite;
+      }
+    }
+  }
+
+  @keyframes rotate {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   :deep(.el-timeline-item__tail) {

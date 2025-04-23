@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { nextTick, onMounted, onUnmounted, ref, Text, watch } from 'vue'
+import { nextTick, normalizeClass, onMounted, onUnmounted, ref, Text, watch } from 'vue'
 import SessionItem from './components/session-item.vue'
 import { ChatRound, Close, Delete, EditPen, Upload, Share } from '@element-plus/icons-vue'
 import MessageRow from './components/message-row.vue'
@@ -62,6 +62,8 @@ const BASE_URL = import.meta.env.VITE_API_HYPERAGI_API
 const wsUserId = generateUUID()
 
 const selectMyAgentId = ref('')
+
+const replySearch = ref(null)
 
 // Add timestamp and flag for message processing control
 const lastProcessedTime = ref(0)
@@ -130,7 +132,9 @@ const { status, data, send, open, close } = useWebSocket(wsUrl, {
 
             reasoningRecord.value.inputReplyMediaFileUrls = inputReplyMediaFileUrls.value
 
-            responseMessage.value.thinkingList.push({ title: 'Analysis completed...', status: 'success' })
+            responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
+
+            responseMessage.value.thinkingList.push({ title: 'Analysis complete, outputting result now', status: 'success' })
 
             await saveMessage(chatMessage.value)
             await saveMessage(responseMessage.value)
@@ -149,7 +153,9 @@ const { status, data, send, open, close } = useWebSocket(wsUrl, {
           inputText.value = msg.data.tweets
           sendLoading.value = true
 
-          responseMessage.value.thinkingList.push({ title: 'Environment content organization completed...', status: 'success' })
+          responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
+
+          responseMessage.value.thinkingList.push({ title: 'Thinking', status: 'pending' })
 
           handleSendMessage({ text: text, inputText: inputText.value, image: '' }).finally(() => {
             isProcessing.value = false
@@ -260,6 +266,7 @@ function handleCloseAgentList() {
 }
 
 onMounted(async () => {
+  getReplySearch()
   checkMobile()
   window.addEventListener('resize', checkMobile)
   await getDefaultContent()
@@ -294,6 +301,18 @@ onMounted(async () => {
   // 添加滚动监听
   contactListRef.value?.addEventListener('scroll', handleScroll)
 })
+
+async function getReplySearch() {
+  const { result } = await request({
+    url: BASE_URL + '/sys/dict/getDictText/3d_client_config/reply_search',
+    method: 'GET',
+    headers: {
+      'X-Access-Token': token.value,
+    },
+  })
+
+  replySearch.value = JSON.parse(result)
+}
 
 // 组件卸载时移除监听
 onUnmounted(() => {
@@ -443,8 +462,6 @@ const preHandleSendMessage = async (message: { text: string; image: string }) =>
   })
 
   if (isOnline.value) {
-    responseMessage.value.thinkingTxt = 'AI POD is observing the environment...'
-
     const msg = {
       action: 'autoReplyTweetsText',
       data: {
@@ -454,7 +471,7 @@ const preHandleSendMessage = async (message: { text: string; image: string }) =>
     }
 
     if (options.value.enableAgent) {
-      responseMessage.value.thinkingTxt = 'Thinking...'
+      responseMessage.value.thinkingList.push({ title: 'Thinking', status: 'pending' })
       handleSendMessage({ text: message.text, inputText: message.text, image: '' })
     } else {
       await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
@@ -462,19 +479,19 @@ const preHandleSendMessage = async (message: { text: string; image: string }) =>
         msg: JSON.stringify(msg),
       })
 
-      responseMessage.value.thinkingList.push({ title: 'AI POD is organizing the environment content...', status: 'success' })
+      responseMessage.value.thinkingList.push({ title: 'Observing the environment', status: 'pending' })
 
       setTimeout(() => {
-        responseMessage.value.thinkingList.push({ title: 'Thinking...', status: 'success' })
-
         console.info('inputTextReplyStatus.value', inputTextReplyStatus.value)
         if (!inputTextReplyStatus.value) {
+          responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
+          responseMessage.value.thinkingList.push({ title: 'Thinking', status: 'pending' })
           handleSendMessage({ text: message.text, inputText: message.text, image: '' })
         }
       }, 10 * 1000)
     }
   } else {
-    responseMessage.value.thinkingList.push({ title: 'Thinking...', status: 'success' })
+    responseMessage.value.thinkingList.push({ title: 'Thinking...', status: 'pending' })
 
     handleSendMessage({ text: message.text, inputText: message.text, image: '' })
   }
@@ -493,8 +510,6 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
   let agentName = ''
 
   options.value.userId = selectAgent.value.sid
-
-  responseMessage.value.thinkingTxt = 'Thinking...'
 
   if (!options.value.enableAgent) {
     agentName = selectAgent.value.nickName
@@ -593,40 +608,56 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
         await addReasoningRecord(reasoningRecord.value)
 
         inputTextReplyStatus.value = true
+        responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
+
+        responseMessage.value.thinkingList.push({ title: 'Analysis complete, outputting result now', status: 'success' })
       } else {
-        responseMessage.value.thinkingList.push({ title: 'AI POD is collecting photos...', status: 'success' })
+        const type = await isPhotoOrCelebrity(message.text)
 
-        const msg = {
-          action: 'autoReplyTweetsMedia',
-          data: {
-            replyTweetsRecordId: wsUserId,
-            tweets: chatMessage.value.textContent,
-            replyTweets: responseMessage.value.textContent,
-            replyTweetsName: selectAgent.value.xusername || selectAgent.value.nickName,
-            authorName: loginUser.value?.realName || 'Guest',
-            authorUserName: loginUser.value?.walletAddress ? `${loginUser.value.walletAddress.slice(0, 6)}...${loginUser.value.walletAddress.slice(-4)}` : '',
-            avatar: avatar,
-          },
+        if (type === 'celebrity') {
+          responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
+          responseMessage.value.thinkingList.push({ title: 'Generating postcard', status: 'pending' })
+        } else if (type === 'photo') {
+          responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
+          responseMessage.value.thinkingList.push({ title: 'Generating images', status: 'pending' })
         }
-        await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
-          userId: selectAgent.value.owner,
-          msg: JSON.stringify(msg),
-        })
 
-        setTimeout(async () => {
-          if (!inputTextReplyStatus.value) {
-            inputTextReplyStatus.value = true
-            isProcessing.value = false
-            await saveMessage(chatMessage.value)
-            await saveMessage(responseMessage.value)
-
-            await addReasoningRecord(reasoningRecord.value)
-
-            sendLoading.value = false
-
-            responseMessage.value.thinkingList.push({ title: 'Analysis completed...', status: 'success' })
+        if (type === 'other') {
+          responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
+          responseMessage.value.thinkingList.push({ title: 'Analysis complete, outputting result now', status: 'success' })
+        } else {
+          const msg = {
+            action: 'autoReplyTweetsMedia',
+            data: {
+              replyTweetsRecordId: wsUserId,
+              tweets: chatMessage.value.textContent,
+              replyTweets: responseMessage.value.textContent,
+              replyTweetsName: selectAgent.value.xusername || selectAgent.value.nickName,
+              authorName: '',
+              authorUserName: loginUser.value?.walletAddress ? `${loginUser.value.walletAddress.slice(0, 6)}...${loginUser.value.walletAddress.slice(-4)}` : '',
+              avatar: avatar,
+            },
           }
-        }, 30 * 1000)
+          await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
+            userId: selectAgent.value.owner,
+            msg: JSON.stringify(msg),
+          })
+
+          setTimeout(async () => {
+            if (!inputTextReplyStatus.value) {
+              inputTextReplyStatus.value = true
+              isProcessing.value = false
+              await saveMessage(chatMessage.value)
+              await saveMessage(responseMessage.value)
+
+              await addReasoningRecord(reasoningRecord.value)
+
+              sendLoading.value = false
+              responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
+              responseMessage.value.thinkingList.push({ title: 'Analysis complete, outputting result now', status: 'success' })
+            }
+          }, 30 * 1000)
+        }
       }
     }
   })
@@ -989,6 +1020,40 @@ async function handleSearchWeb(message: boolean) {
 
 function handleLogin() {
   loginRef.value.show()
+}
+
+async function isPhotoOrCelebrity(question: string) {
+  // Keywords related to celebrity photos
+  const celebrityKeywords = replySearch.value['明信片']
+
+  // Keywords related to taking photos
+  const photoKeywords = replySearch.value['拍照']
+
+  // Check for celebrity keywords
+  const isCelebrity = celebrityKeywords.some((keyword) => {
+    // For English words, compare in lowercase
+    if (/^[a-zA-Z\s]+$/.test(keyword)) {
+      return question.toLowerCase().includes(keyword.toLowerCase())
+    }
+    // For Chinese characters, compare directly
+    return question.includes(keyword)
+  })
+
+  // Check for photo keywords
+  const isPhoto = photoKeywords.some((keyword) => {
+    if (/^[a-zA-Z\s]+$/.test(keyword)) {
+      return question.toLowerCase().includes(keyword.toLowerCase())
+    }
+    return question.includes(keyword)
+  })
+
+  if (isCelebrity) {
+    return 'celebrity'
+  } else if (isPhoto) {
+    return 'photo'
+  }
+
+  return 'other'
 }
 
 async function unbindX() {

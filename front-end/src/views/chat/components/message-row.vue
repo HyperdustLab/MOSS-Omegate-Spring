@@ -68,9 +68,9 @@ const handleDownload = async (imageUrl: string) => {
       <el-avatar :size="40" :src="message.avatar || avatar" />
     </div>
     <div class="message-content">
-      <div class="message-text" v-html="message.textContent"></div>
+      <ThoughtChain v-if="message.thinkingList && message.thinkingList.length > 0" :items="message.thinkingList" />
 
-      <ThoughtChain class="mt-5" v-if="message.thinkingList && message.thinkingList.length > 0" :items="message.thinkingList" />
+      <div class="message-text mt-5" v-html="message.textContent"></div>
 
       <div class="image-container" v-if="images && images.length > 0">
         <div v-for="(image, index) in images" :key="index" class="image-wrapper">
