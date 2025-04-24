@@ -134,7 +134,7 @@ const { status, data, send, open, close } = useWebSocket(wsUrl, {
 
             responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
 
-            responseMessage.value.thinkingList.push({ title: 'Analysis complete', status: 'success' })
+            responseMessage.value.thinkingList.push({ title: 'Think complete', status: 'success' })
 
             await saveMessage(chatMessage.value)
             await saveMessage(responseMessage.value)
@@ -610,7 +610,7 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
         inputTextReplyStatus.value = true
         responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
 
-        responseMessage.value.thinkingList.push({ title: 'Analysis complete', status: 'success' })
+        responseMessage.value.thinkingList.push({ title: 'Think complete', status: 'success' })
       } else {
         const type = await isPhotoOrCelebrity(message.text)
 
@@ -626,7 +626,7 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
           isProcessing.value = false
           sendLoading.value = false
           responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
-          responseMessage.value.thinkingList.push({ title: 'Analysis complete', status: 'success' })
+          responseMessage.value.thinkingList.push({ title: 'Think complete', status: 'success' })
         } else {
           const msg = {
             action: 'autoReplyTweetsMedia',
@@ -656,7 +656,7 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
 
               sendLoading.value = false
               responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
-              responseMessage.value.thinkingList.push({ title: 'Analysis complete', status: 'success' })
+              responseMessage.value.thinkingList.push({ title: 'Think complete', status: 'success' })
             }
           }, 30 * 1000)
         }
