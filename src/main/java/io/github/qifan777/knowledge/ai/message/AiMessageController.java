@@ -1,7 +1,6 @@
 package io.github.qifan777.knowledge.ai.message;
 
 import cn.dev33.satoken.annotation.SaIgnore;
-import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
@@ -107,14 +106,7 @@ public class AiMessageController {
 
     AiMessageWrapper aiMessageWrapper = objectMapper.readValue(input, AiMessageWrapper.class);
 
-    String userId = null;
-
-    try {
-      userId = (String) StpUtil.getLoginId();
-    } catch (Exception ignored) {
-
-      userId = aiMessageWrapper.getParams().getUserId();
-    }
+    String userId = aiMessageWrapper.getParams().getUserId();
 
     String[] functionBeanNames = new String[0];
     // 如果启用Agent则获取Agent的bean
@@ -175,7 +167,7 @@ public class AiMessageController {
 
     } else {
 
-      exp = b.in("userId", finalUserId, "public").build();
+      exp = b.in("userId", finalUserId).build();
 
       log.info("filterExpression: {}", exp);
 

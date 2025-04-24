@@ -623,6 +623,8 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
         }
 
         if (type === 'other') {
+          isProcessing.value = false
+          sendLoading.value = false
           responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
           responseMessage.value.thinkingList.push({ title: 'Analysis complete, outputting result now', status: 'success' })
         } else {

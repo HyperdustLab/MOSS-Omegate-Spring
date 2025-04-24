@@ -57,8 +57,17 @@ defineProps<{
     &.is-pending {
       .el-timeline-item__icon {
         animation: rotate 1s linear infinite;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
     }
+  }
+
+  :deep(.el-timeline-item__icon) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   @keyframes rotate {
