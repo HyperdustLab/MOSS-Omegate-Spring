@@ -134,7 +134,7 @@ const { status, data, send, open, close } = useWebSocket(wsUrl, {
 
             responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
 
-            responseMessage.value.thinkingList.push({ title: 'Analysis complete, outputting result now', status: 'success' })
+            responseMessage.value.thinkingList.push({ title: 'Analysis complete', status: 'success' })
 
             await saveMessage(chatMessage.value)
             await saveMessage(responseMessage.value)
@@ -155,7 +155,7 @@ const { status, data, send, open, close } = useWebSocket(wsUrl, {
 
           responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
 
-          responseMessage.value.thinkingList.push({ title: 'Thinking', status: 'pending' })
+          responseMessage.value.thinkingList.push({ title: 'Think', status: 'pending' })
 
           handleSendMessage({ text: text, inputText: inputText.value, image: '' }).finally(() => {
             isProcessing.value = false
@@ -471,7 +471,7 @@ const preHandleSendMessage = async (message: { text: string; image: string }) =>
     }
 
     if (options.value.enableAgent) {
-      responseMessage.value.thinkingList.push({ title: 'Thinking', status: 'pending' })
+      responseMessage.value.thinkingList.push({ title: 'Think', status: 'pending' })
       handleSendMessage({ text: message.text, inputText: message.text, image: '' })
     } else {
       await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
@@ -485,13 +485,13 @@ const preHandleSendMessage = async (message: { text: string; image: string }) =>
         console.info('inputTextReplyStatus.value', inputTextReplyStatus.value)
         if (!inputTextReplyStatus.value) {
           responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
-          responseMessage.value.thinkingList.push({ title: 'Thinking', status: 'pending' })
+          responseMessage.value.thinkingList.push({ title: 'Think', status: 'pending' })
           handleSendMessage({ text: message.text, inputText: message.text, image: '' })
         }
       }, 10 * 1000)
     }
   } else {
-    responseMessage.value.thinkingList.push({ title: 'Thinking...', status: 'pending' })
+    responseMessage.value.thinkingList.push({ title: 'Think', status: 'pending' })
 
     handleSendMessage({ text: message.text, inputText: message.text, image: '' })
   }
@@ -610,7 +610,7 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
         inputTextReplyStatus.value = true
         responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
 
-        responseMessage.value.thinkingList.push({ title: 'Analysis complete, outputting result now', status: 'success' })
+        responseMessage.value.thinkingList.push({ title: 'Analysis complete', status: 'success' })
       } else {
         const type = await isPhotoOrCelebrity(message.text)
 
@@ -626,7 +626,7 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
           isProcessing.value = false
           sendLoading.value = false
           responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
-          responseMessage.value.thinkingList.push({ title: 'Analysis complete, outputting result now', status: 'success' })
+          responseMessage.value.thinkingList.push({ title: 'Analysis complete', status: 'success' })
         } else {
           const msg = {
             action: 'autoReplyTweetsMedia',
@@ -656,7 +656,7 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
 
               sendLoading.value = false
               responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
-              responseMessage.value.thinkingList.push({ title: 'Analysis complete, outputting result now', status: 'success' })
+              responseMessage.value.thinkingList.push({ title: 'Analysis complete', status: 'success' })
             }
           }, 30 * 1000)
         }
