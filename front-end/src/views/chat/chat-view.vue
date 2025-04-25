@@ -55,6 +55,8 @@ const loading = ref(false)
 
 const sendLoading = ref(false)
 
+const defaultWelcomeMessage = ref('')
+
 const loginRef = ref<InstanceType<typeof Login>>()
 
 const BASE_URL = import.meta.env.VITE_API_HYPERAGI_API
@@ -268,6 +270,7 @@ function handleCloseAgentList() {
 onMounted(async () => {
   getReplySearch()
   checkMobile()
+  await getDefaultWelcomeMessage()
   window.addEventListener('resize', checkMobile)
   await getDefaultContent()
 
@@ -312,6 +315,18 @@ async function getReplySearch() {
   })
 
   replySearch.value = JSON.parse(result)
+}
+
+async function getDefaultWelcomeMessage() {
+  const { result } = await request({
+    url: BASE_URL + '/sys/dict/getDictText/sys_config/welcomeMessage',
+    method: 'GET',
+    headers: {
+      'X-Access-Token': token.value,
+    },
+  })
+
+  defaultWelcomeMessage.value = result
 }
 
 // 组件卸载时移除监听
@@ -910,6 +925,25 @@ async function getMessageList() {
   })
 
   messageList.value = result.records
+
+  if (messageList.value.length === 0) {
+    let welcomeMessage = selectAgent.value.welcomeMessage
+    if (!welcomeMessage) {
+      welcomeMessage = defaultWelcomeMessage.value.replace('[agentName].', selectAgent.value.nickName)
+    }
+
+    messageList.value.push({
+      type: 'ASSISTANT',
+      textContent: welcomeMessage,
+      aiSessionId: activeSession.value.id,
+      sessionId: activeSession.value.id,
+      avatar: selectAgent.value.avatar,
+      name: selectAgent.value.nickName,
+      creatorId: selectAgent.value.sid,
+      editorId: selectAgent.value.sid,
+      thinkingList: [],
+    })
+  }
 }
 
 const handleEditSession = () => {
