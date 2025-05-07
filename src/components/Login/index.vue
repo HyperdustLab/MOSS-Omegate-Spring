@@ -181,12 +181,6 @@ async function handleMetamaskLogin() {
 }
 
 async function loginToken(token: string) {
-  const { result } = await request.postForm('/user/login', {
-    token: token,
-  })
-
-  localStorage.setItem('token', result.tokenValue)
-
   dialogVisible.value = false
 
   localStorage.setItem('X-Token', token)

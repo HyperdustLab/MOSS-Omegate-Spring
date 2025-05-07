@@ -485,26 +485,21 @@ const preHandleSendMessage = async (message: { text: string; image: string }) =>
       },
     }
 
-    if (options.value.enableAgent) {
-      responseMessage.value.thinkingList.push({ title: 'Think', status: 'pending' })
-      handleSendMessage({ text: message.text, inputText: message.text, image: '' })
-    } else {
-      await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
-        userId: selectAgent.value.owner,
-        msg: JSON.stringify(msg),
-      })
+    await request.post(BASE_URL + '/ws/socketMsg/sendSocketMsg', {
+      userId: selectAgent.value.owner,
+      msg: JSON.stringify(msg),
+    })
 
-      responseMessage.value.thinkingList.push({ title: 'Observing the environment', status: 'pending' })
+    responseMessage.value.thinkingList.push({ title: 'Observing the environment', status: 'pending' })
 
-      setTimeout(() => {
-        console.info('inputTextReplyStatus.value', inputTextReplyStatus.value)
-        if (!inputTextReplyStatus.value) {
-          responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
-          responseMessage.value.thinkingList.push({ title: 'Think', status: 'pending' })
-          handleSendMessage({ text: message.text, inputText: message.text, image: '' })
-        }
-      }, 10 * 1000)
-    }
+    setTimeout(() => {
+      console.info('inputTextReplyStatus.value', inputTextReplyStatus.value)
+      if (!inputTextReplyStatus.value) {
+        responseMessage.value.thinkingList[responseMessage.value.thinkingList.length - 1].status = 'success'
+        responseMessage.value.thinkingList.push({ title: 'Think', status: 'pending' })
+        handleSendMessage({ text: message.text, inputText: message.text, image: '' })
+      }
+    }, 10 * 1000)
   } else {
     responseMessage.value.thinkingList.push({ title: 'Think', status: 'pending' })
 
@@ -518,77 +513,76 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
     return
   }
 
-  const form = new FormData()
+  let content = selectAgent.value.personalization
 
-  let content = ''
-
-  let agentName = ''
-
-  options.value.userId = selectAgent.value.sid
-
-  if (!options.value.enableAgent) {
-    agentName = selectAgent.value.nickName
-
-    content = selectAgent.value.personalization
-    if (!content) {
-      content = defaultContent.value
-    }
-
-    content = content.replace('[agent name]', agentName)
+  if (!content) {
+    content = defaultContent.value
   }
 
-  form.set('content', content)
+  content = content.replace('[agent name]', selectAgent.value.nickName)
 
-  options.value.model = options.value.enableAgent ? 'qwen2.5:32b' : 'deepseek-r1:32b'
-
-  const res = await request({
-    url: BASE_URL + `/mgn/nodePort/getNodePort`,
-    method: 'GET',
-    params: { serviceName: options.value.model },
-    headers: {
-      'X-Access-Token': token.value,
-    },
-  })
-
-  options.value.baseUrl = `http://${res.result.ip}:${res.result.port}`
-
-  const body: AiMessageWrapper = { message: chatMessage.value, params: options.value }
-
-  form.set('input', JSON.stringify(body))
-
-  if (fileList.value.length && fileList.value[0].raw) {
-    form.append('file', fileList.value[0].raw)
+  const messageParams = {
+    assistantId: selectAgent.value.sid,
+    model: 'MFDoom/deepseek-r1-tool-calling:32b',
+    content: content,
+    userId: loginUser.value?.id || currSessionId.value,
+    textContent: message.inputText,
+    sessionId: activeSession.value.id,
+    enableVectorStore: options.value.enableVectorStore,
+    enableTool: selectAgent.value.functionStatus === 'Y',
   }
-  const evtSource = new SSE(API_PREFIX + '/message/chat', {
+
+  const evtSource = new SSE(BASE_URL + '/mgn/agent/asyncChat', {
     withCredentials: true,
     // Disable auto start, need to call stream() to initiate request
     start: false,
-    payload: form as any,
+    payload: JSON.stringify(messageParams),
+    headers: {
+      'Content-Type': 'application/json',
+    },
     method: 'POST',
   })
 
   let isThinking = true
   let buffer = ''
 
-  evtSource.addEventListener('message', async (event: any) => {
-    const response = JSON.parse(event.data) as ChatResponse
-    const finishReason = response.result.metadata.finishReason
-    if (response.result.output.content) {
-      if (isThinking && !options.value.enableAgent) {
-        buffer = response.result.output.content
-        if (buffer.indexOf('</think>') > -1) {
-          isThinking = false
-        }
-      } else {
-        responseMessage.value.textContent += response.result.output.content
-      }
+  evtSource.stream()
 
-      // Scroll to bottom
-      await nextTick(() => {
-        messageListRef.value?.scrollTo(0, messageListRef.value.scrollHeight)
-      })
+  evtSource.addEventListener('message', async (event: any) => {
+    console.info('event.data', event.data)
+
+    const eventData = event.data
+    const data = JSON.parse(eventData)
+
+    if (isThinking) {
+      // Check if first few characters of buffer contain any characters from </think>
+      const thinkChars = ['<', '/', 't', 'h', 'i', 'n', 'k', '>']
+      const firstFewChars = buffer.slice(0, 8) // Get first 8 characters
+      const hasThinkChars = thinkChars.some((char) => firstFewChars.includes(char))
+
+      if (!hasThinkChars) {
+        isThinking = false
+        responseMessage.value.textContent += data.content
+
+        // Scroll to bottom
+        await nextTick(() => {
+          messageListRef.value?.scrollTo(0, messageListRef.value.scrollHeight)
+        })
+      } else if (buffer.indexOf('</think>') > -1) {
+        isThinking = false
+        responseMessage.value.textContent += data.content
+
+        // Scroll to bottom
+        await nextTick(() => {
+          messageListRef.value?.scrollTo(0, messageListRef.value.scrollHeight)
+        })
+      }
+      buffer += data.content || ''
+    } else {
+      responseMessage.value.textContent += data.content || ''
     }
-    if (finishReason && finishReason.toLowerCase() == 'stop') {
+
+    if (data.metadata) {
       evtSource.close()
 
       chatMessage.value.textContent = message.text
@@ -604,7 +598,6 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
         serviceName: options.value.model,
         systemContent: content,
         remark: options.value.baseUrl,
-        nodeId: res.result.minerNodeId,
       }
 
       let avatar = loginUser.value ? loginUser.value.avatar : ''
@@ -615,7 +608,7 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
 
       inputTextReplyStatus.value = false
 
-      if (options.value.enableAgent || !isOnline.value) {
+      if (!isOnline.value) {
         sendLoading.value = false
         await saveMessage(chatMessage.value)
         await saveMessage(responseMessage.value)
@@ -677,15 +670,6 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
         }
       }
     }
-  })
-
-  // Call stream to initiate request
-  evtSource.stream()
-
-  // Display both messages on page
-
-  await nextTick(() => {
-    messageListRef.value?.scrollTo(0, messageListRef.value.scrollHeight)
   })
 }
 

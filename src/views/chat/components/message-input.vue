@@ -60,7 +60,7 @@ const uploadToggleButton = () => {
   <div class="message-input">
     <div>
       <div style="display: flex; align-items: center">
-        <el-button v-if="props.functionStatus === 'Y'" :style="{ backgroundColor: buttonActive.search ? '#39b35752' : '#2d2736', color: buttonActive.search ? '#39b357' : 'white', border: 'aliceblue' }" round @click="searchToggleButton" class="toggle-button">Cypto Search</el-button>
+        <!-- <el-button v-if="props.functionStatus === 'Y'" :style="{ backgroundColor: buttonActive.search ? '#39b35752' : '#2d2736', color: buttonActive.search ? '#39b357' : 'white', border: 'aliceblue' }" round @click="searchToggleButton" class="toggle-button">Cypto Search</el-button> -->
 
         <el-button :style="{ backgroundColor: '#2d2736', color: 'white', border: 'aliceblue' }" icon="Plus" round disabled class="toggle-button">
           <img style="width: 20px; height: 20px" src="../../../assets/upload.svg" alt="upload" />
