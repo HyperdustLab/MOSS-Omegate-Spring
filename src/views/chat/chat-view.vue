@@ -528,7 +528,7 @@ const handleSendMessage = async (message: { text: string; inputText: string; ima
     userId: loginUser.value?.id || currSessionId.value,
     textContent: message.inputText,
     sessionId: activeSession.value.id,
-    enableVectorStore: options.value.enableVectorStore,
+    enableVectorStore: true,
     enableTool: selectAgent.value.functionStatus === 'Y',
   }
 
